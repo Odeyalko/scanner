@@ -1,166 +1,144 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Scanner Webview by Odeyalko</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body, html { width: 100%; height: 100%; font-family: Arial, sans-serif; background: #f2f2f2; display: flex; flex-direction: column; }
-
+    * { margin:0; padding:0; box-sizing:border-box }
+    body,html { width:100%; height:100%; font-family:Arial,sans-serif; display:flex; flex-direction:column; background:#f2f2f2 }
     .toolbar {
-      padding: 10px;
-      background: #fff;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      z-index: 2;
-      transition: opacity 0.5s, height 0.5s, padding 0.5s;
+      padding:10px; background:#fff; box-shadow:0 2px 4px rgba(0,0,0,0.1);
+      transition:0.3s;
     }
-    .toolbar.hidden {
-      opacity: 0;
-      pointer-events: none;
-      height: 0;
-      padding: 0;
-      overflow: hidden;
-    }
+    .toolbar.hidden { height:0; padding:0; opacity:0; overflow:hidden }
     #urlInput {
-      width: 100%; padding: 10px; font-size: 16px;
-      border: 2px solid #ddd; border-radius: 8px;
-      outline: none; transition: border 0.3s;
+      width:100%; padding:10px; font-size:16px;
+      border:2px solid #ddd; border-radius:8px; outline:none;
     }
-    #urlInput:focus { border-color: #aaa; }
-
-    #content { position: relative; flex: 1; overflow: hidden; }
-    #webview { width: 100%; height: 100%; border: none; z-index: 1; }
-
+    #urlInput:focus { border-color:#aaa }
+    #content { position:relative; flex:1; overflow:hidden }
+    #webview {
+      width:100%; height:100%; border:none; z-index:1
+    }
     #scanBtn {
-      position: fixed;
-      bottom: 20px; right: 20px;
-      width: 64px; height: 64px;
-      border: none; border-radius: 50%;
-      font-size: 32px; background: #ff4081; color: #fff;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      cursor: pointer; animation: pulse 2s infinite;
-      z-index: 10;
+      position:fixed; bottom:20px; right:20px;
+      width:64px; height:64px; border:none; border-radius:50%;
+      font-size:32px; background:#ff4081; color:#fff;
+      box-shadow:0 4px 12px rgba(0,0,0,0.3); cursor:pointer;
+      animation:pulse 2s infinite; z-index:10;
     }
-    @keyframes pulse {
-      0%,100% { transform: scale(1); }
-      50% { transform: scale(1.1); }
-    }
-
+    @keyframes pulse {0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
     #videoOverlay {
-      position: fixed; top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
-      display: flex; align-items: center; justify-content: center;
-      flex-direction: column;
-      z-index: 999;
+      position:fixed;top:0;left:0;width:100%;height:100%;
+      background:rgba(0,0,0,0.8);
+      display:flex;align-items:center;justify-content:center;
+      flex-direction:column;z-index:999;
     }
-    #videoOverlay video {
-      width: 90%; max-width: 500px;
-      border: 4px solid #fff; border-radius: 12px;
-    }
-
-    /* Кнопка закрыть */
+    #videoOverlay video { width:90%; max-width:500px; border:4px solid:#fff; border-radius:12px }
     #closeBtn {
-      position: absolute;
-      top: 20px; right: 20px;
-      width: 48px; height: 48px;
-      border: none; border-radius: 50%;
-      font-size: 24px; background: #fff; color: #ff4081;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      cursor: pointer; animation: pop 1.5s infinite;
+      position:absolute;top:20px;right:20px;
+      width:48px;height:48px;border:none;border-radius:50%;
+      font-size:24px;background:#fff;color:#ff4081;
+      box-shadow:0 4px 12px rgba(0,0,0,0.3);
+      animation:pop 1.5s infinite; cursor:pointer;
     }
-    @keyframes pop {
-      0%,100% { transform: scale(1); }
-      50% { transform: scale(1.2); }
-    }
-
-    .footer {
-      text-align: center; padding: 8px;
-      background: #fff; font-size: 14px; color: #666;
-      z-index: 2;
-    }
+    @keyframes pop {0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+    .footer { text-align:center;padding:8px;background:#fff;font-size:14px;color:#666 }
   </style>
-  <!-- UMD-версия ZXing -->
   <script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
 </head>
 <body>
   <div class="toolbar" id="toolbar">
-    <input id="urlInput" type="text" placeholder="Введите URL и нажмите Enter" />
+    <input id="urlInput" type="text" placeholder="Введите URL и нажмите Enter">
   </div>
-
   <div id="content">
-    <iframe id="webview" src="about:blank"></iframe>
+    <iframe id="webview" srcdoc="<p style='padding:20px;font-size:18px;color:#999'>Введите URL выше и нажмите Enter</p>"></iframe>
     <button id="scanBtn" title="Сканировать">📷</button>
   </div>
-
   <div class="footer">by Odeyalko</div>
 
   <script>
-    const toolbar  = document.getElementById('toolbar');
+    const toolbar = document.getElementById('toolbar');
     const urlInput = document.getElementById('urlInput');
-    const webview  = document.getElementById('webview');
-    const scanBtn  = document.getElementById('scanBtn');
+    const iframe = document.getElementById('webview');
+    const scanBtn = document.getElementById('scanBtn');
 
-    // 1) Открытие URL и скрытие панели
-    urlInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        let url = urlInput.value.trim();
-        if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
-        webview.src = url;
+    // При нажатии Enter фетчим целевой HTML, инжектим base и скрипт, и показываем в srcdoc
+    urlInput.addEventListener('keydown', async e => {
+      if (e.key !== 'Enter') return;
+      let url = urlInput.value.trim();
+      if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
+      try {
+        const res = await fetch(url);
+        let html = await res.text();
+        // Инъекция <base> и нашего скрипта перед </head> и </body>
+        const injectBase = `<base href="${url}">`;
+        const injectScript = `
+<script>
+// эмуляция ввода текста и Enter
+window.__injectText = function(text) {
+  const el = document.activeElement && /(INPUT|TEXTAREA)/.test(document.activeElement.tagName)
+    ? document.activeElement
+    : document.querySelector('input, textarea');
+  if (!el) return;
+  el.focus();
+  el.value = '';
+  for (let ch of text) {
+    el.value += ch;
+    el.dispatchEvent(new KeyboardEvent('keydown',{key:ch}));
+  }
+  el.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter'}));
+};
+</script>`;
+        // Вставляем base в <head> и скрипт перед </body>
+        html = html.replace(/<head([^>]*)>/i, `<head$1>${injectBase}`)
+                   .replace(/<\/body>/i, `${injectScript}</body>`);
+        // Устанавливаем в srcdoc
+        iframe.srcdoc = html;
+        // Скрываем toolbar
         toolbar.classList.add('hidden');
+      } catch (err) {
+        alert('Не удалось загрузить страницу. Возможно, сайт не разрешает кросс-фетч.');
+        console.error(err);
       }
     });
 
-    // 2) Сканирование QR/штрихкодов
+    // Запуск камеры и сканирование
     scanBtn.addEventListener('click', () => {
       scanBtn.disabled = true;
-
-      // Оверлей и его элементы
       const overlay = document.createElement('div');
       overlay.id = 'videoOverlay';
-
       const video = document.createElement('video');
-      video.setAttribute('autoplay', '');
-      video.setAttribute('playsinline', '');
+      video.autoplay = true; video.playsInline = true;
       overlay.appendChild(video);
-
       const closeBtn = document.createElement('button');
-      closeBtn.id = 'closeBtn';
-      closeBtn.title = 'Закрыть камеру';
-      closeBtn.textContent = '❌';
+      closeBtn.id = 'closeBtn'; closeBtn.textContent = '❌';
       overlay.appendChild(closeBtn);
-
       document.body.appendChild(overlay);
 
       const codeReader = new ZXing.BrowserMultiFormatReader();
-
-      // Стартуем сканирование
       codeReader.decodeFromVideoDevice(null, video, (result, err) => {
         if (result) {
           const text = result.getText();
           codeReader.reset();
           overlay.remove();
           scanBtn.disabled = false;
-
-          urlInput.value = text;
-          let url = text.trim();
-          if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
-          webview.src = url;
+          // вызываем функцию внутри iframe
+          iframe.contentWindow.__injectText(text);
         }
       }).catch(err => {
-        console.error('Ошибка запуска камеры:', err);
-        alert('Не удалось получить доступ к камере. Проверьте localhost/HTTPS и разрешения.');
+        console.error(err);
+        alert('Не удалось получить доступ к камере. Запустите по HTTPS или localhost.');
         overlay.remove();
         scanBtn.disabled = false;
       });
 
-      // Закрыть по кнопке
-      closeBtn.addEventListener('click', () => {
+      closeBtn.onclick = () => {
         codeReader.reset();
         overlay.remove();
         scanBtn.disabled = false;
-      });
+      };
     });
   </script>
 </body>
