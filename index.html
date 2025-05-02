@@ -28,18 +28,18 @@
     }
     @keyframes pulse {0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
     #videoOverlay {
-      position:fixed;top:0;left:0;width:100%;height:100%;
+      position:fixed; top:0; left:0; width:100%; height:100%;
       background:rgba(0,0,0,0.8);
-      display:flex;align-items:center;justify-content:center;
-      flex-direction:column;z-index:999;
+      display:flex; align-items:center; justify-content:center;
+      flex-direction:column; z-index:999;
     }
     #videoOverlay video {
       width:90%; max-width:500px; border:4px solid:#fff; border-radius:12px
     }
     #closeBtn {
-      position:absolute;top:20px;right:20px;
-      width:48px;height:48px;border:none;border-radius:50%;
-      font-size:24px;background:#fff;color:#ff4081;
+      position:absolute; top:20px; right:20px;
+      width:48px; height:48px; border:none; border-radius:50%;
+      font-size:24px; background:#fff; color:#ff4081;
       box-shadow:0 4px 12px rgba(0,0,0,0.3);
       animation:pop 1.5s infinite; cursor:pointer;
     }
@@ -53,9 +53,7 @@
     <input id="urlInput" type="text" placeholder="Введите URL и нажмите Enter">
   </div>
   <div id="content">
-    <iframe id="webview"
-      srcdoc="<p style='padding:20px;font-size:18px;color:#999'>Введите URL выше и нажмите Enter</p>">
-    </iframe>
+    <iframe id="webview" srcdoc="<p style='padding:20px;font-size:18px;color:#999'>Введите URL и нажмите Enter</p>"></iframe>
     <button id="scanBtn" title="Сканировать">📷</button>
   </div>
   <div class="footer">by Odeyalko</div>
@@ -66,39 +64,51 @@
     const iframe = document.getElementById('webview');
     const scanBtn = document.getElementById('scanBtn');
 
+    // Функция-генератор скрипта для инъекции
+    function makeInjectScript() {
+      const fn = `
+        window.__injectText = function(text) {
+          const el = document.activeElement && /(INPUT|TEXTAREA)/.test(document.activeElement.tagName)
+            ? document.activeElement
+            : document.querySelector('input, textarea');
+          if (!el) return;
+          el.focus();
+          el.value = '';
+          for (const ch of text) {
+            el.value += ch;
+            el.dispatchEvent(new KeyboardEvent('keydown',{key: ch}));
+          }
+          el.dispatchEvent(new KeyboardEvent('keydown',{key: 'Enter'}));
+        };
+      `;
+      const script = document.createElement('script');
+      script.textContent = fn;
+      return script;
+    }
+
     urlInput.addEventListener('keydown', async e => {
       if (e.key !== 'Enter') return;
       let url = urlInput.value.trim();
       if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
+
       try {
         const res = await fetch(url);
-        let html = await res.text();
-
-        // Вставляем <base> сразу после <head>
-        html = html.replace(
-          /<head([^>]*)>/i,
-          `<head$1><base href="${url}">`
-        );
-
-        // Инжектим нашу функцию перед </body>
-        const injectScript =
-          '<script>' +
-          'window.__injectText = function(t){' +
-            'const el = document.activeElement && /(INPUT|TEXTAREA)/.test(document.activeElement.tagName)' +
-              '? document.activeElement : document.querySelector("input, textarea");' +
-            'if(!el) return; el.focus(); el.value="";' +
-            'for(const ch of t){ el.value+=ch; el.dispatchEvent(new KeyboardEvent("keydown",{key:ch})); }' +
-            'el.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter"}));' +
-          '};' +
-          '</script>';
-
-        html = html.replace(/<\/body>/i, injectScript + '</body>');
-
-        iframe.srcdoc = html;
+        const text = await res.text();
+        // Парсим полученный HTML
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, 'text/html');
+        // Вставляем base[href]
+        const base = document.createElement('base');
+        base.href = url;
+        doc.head.insertBefore(base, doc.head.firstChild);
+        // Вставляем наш инжект-скрипт
+        doc.body.appendChild(makeInjectScript());
+        // Сериализуем и показываем
+        iframe.srcdoc = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
         toolbar.classList.add('hidden');
       } catch (err) {
         console.error(err);
-        alert('Не удалось загрузить страницу. Возможно, сайт не разрешает CORS.');
+        alert('Не удалось загрузить страницу. Проверьте CORS или URL.');
       }
     });
 
@@ -106,28 +116,25 @@
       scanBtn.disabled = true;
       const overlay = document.createElement('div');
       overlay.id = 'videoOverlay';
-
       const video = document.createElement('video');
-      video.autoplay = true; video.playsInline = true;
+      video.autoplay = true;
+      video.playsInline = true;
       overlay.appendChild(video);
-
       const closeBtn = document.createElement('button');
       closeBtn.id = 'closeBtn';
       closeBtn.textContent = '❌';
       overlay.appendChild(closeBtn);
-
       document.body.appendChild(overlay);
 
       const reader = new ZXing.BrowserMultiFormatReader();
       reader.decodeFromVideoDevice(null, video, (result, err) => {
         if (result) {
-          const text = result.getText();
+          const scanned = result.getText();
           reader.reset();
           overlay.remove();
           scanBtn.disabled = false;
-          // вызываем в iframe нашу функцию
           try {
-            iframe.contentWindow.__injectText(text);
+            iframe.contentWindow.__injectText(scanned);
           } catch (e) {
             console.error(e);
             alert('Не удалось передать текст в iframe.');
@@ -149,3 +156,4 @@
   </script>
 </body>
 </html>
+
