@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Scanner Webview by Odeyalko</title>
+  <title>QR-Scanner by Odeyalko</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box }
     body,html { width:100%; height:100%; font-family:Arial,sans-serif; display:flex; flex-direction:column; background:#f2f2f2 }
@@ -18,7 +18,7 @@
     }
     #urlInput:focus { border-color:#aaa }
     #content { position:relative; flex:1; overflow:hidden }
-    #webview { width:100%; height:100%; border:none; z-index:1 }
+    #webview { width:100%; height:100%; border:none; }
     #scanBtn {
       position:fixed; bottom:20px; right:20px;
       width:64px; height:64px; border:none; border-radius:50%;
@@ -34,7 +34,7 @@
       flex-direction:column; z-index:999;
     }
     #videoOverlay video {
-      width:90%; max-width:500px; border:4px solid:#fff; border-radius:12px
+      width:90%; max-width:500px; border:4px solid:#fff; border-radius:12px;
     }
     #closeBtn {
       position:absolute; top:20px; right:20px;
@@ -53,107 +53,76 @@
     <input id="urlInput" type="text" placeholder="Введите URL и нажмите Enter">
   </div>
   <div id="content">
-    <iframe id="webview" srcdoc="<p style='padding:20px;font-size:18px;color:#999'>Введите URL и нажмите Enter</p>"></iframe>
+    <iframe id="webview"
+      srcdoc="<p style='padding:20px;font-size:18px;color:#999'>Введите URL выше и нажмите Enter</p>">
+    </iframe>
     <button id="scanBtn" title="Сканировать">📷</button>
   </div>
   <div class="footer">by Odeyalko</div>
 
   <script>
-    const toolbar = document.getElementById('toolbar');
-    const urlInput = document.getElementById('urlInput');
-    const iframe = document.getElementById('webview');
-    const scanBtn = document.getElementById('scanBtn');
+    const toolbar   = document.getElementById('toolbar');
+    const urlInput  = document.getElementById('urlInput');
+    const webview   = document.getElementById('webview');
+    const scanBtn   = document.getElementById('scanBtn');
 
-    // Функция-генератор скрипта для инъекции
-    function makeInjectScript() {
-      const fn = `
-        window.__injectText = function(text) {
-          const el = document.activeElement && /(INPUT|TEXTAREA)/.test(document.activeElement.tagName)
-            ? document.activeElement
-            : document.querySelector('input, textarea');
-          if (!el) return;
-          el.focus();
-          el.value = '';
-          for (const ch of text) {
-            el.value += ch;
-            el.dispatchEvent(new KeyboardEvent('keydown',{key: ch}));
-          }
-          el.dispatchEvent(new KeyboardEvent('keydown',{key: 'Enter'}));
-        };
-      `;
-      const script = document.createElement('script');
-      script.textContent = fn;
-      return script;
-    }
-
-    urlInput.addEventListener('keydown', async e => {
-      if (e.key !== 'Enter') return;
-      let url = urlInput.value.trim();
-      if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
-
-      try {
-        const res = await fetch(url);
-        const text = await res.text();
-        // Парсим полученный HTML
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(text, 'text/html');
-        // Вставляем base[href]
-        const base = document.createElement('base');
-        base.href = url;
-        doc.head.insertBefore(base, doc.head.firstChild);
-        // Вставляем наш инжект-скрипт
-        doc.body.appendChild(makeInjectScript());
-        // Сериализуем и показываем
-        iframe.srcdoc = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+    // Открываем сайт в iframe и прячем панель URL
+    urlInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        let url = urlInput.value.trim();
+        if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
+        webview.src = url;
         toolbar.classList.add('hidden');
-      } catch (err) {
-        console.error(err);
-        alert('Не удалось загрузить страницу. Проверьте CORS или URL.');
       }
     });
 
+    // Запускаем сканер и копируем результат
     scanBtn.addEventListener('click', () => {
       scanBtn.disabled = true;
+
+      // Создаём оверлей с видео
       const overlay = document.createElement('div');
       overlay.id = 'videoOverlay';
       const video = document.createElement('video');
       video.autoplay = true;
       video.playsInline = true;
       overlay.appendChild(video);
+
       const closeBtn = document.createElement('button');
       closeBtn.id = 'closeBtn';
       closeBtn.textContent = '❌';
       overlay.appendChild(closeBtn);
+
       document.body.appendChild(overlay);
 
-      const reader = new ZXing.BrowserMultiFormatReader();
-      reader.decodeFromVideoDevice(null, video, (result, err) => {
+      const codeReader = new ZXing.BrowserMultiFormatReader();
+      codeReader.decodeFromVideoDevice(null, video, (result, err) => {
         if (result) {
-          const scanned = result.getText();
-          reader.reset();
+          const text = result.getText();
+          codeReader.reset();
           overlay.remove();
           scanBtn.disabled = false;
-          try {
-            iframe.contentWindow.__injectText(scanned);
-          } catch (e) {
-            console.error(e);
-            alert('Не удалось передать текст в iframe.');
-          }
+          // копируем в буфер
+          navigator.clipboard.writeText(text).then(() => {
+            alert('Сканировано: ' + text + '\n\nТекст скопирован в буфер обмена. Перейдите на нужный сайт и вставьте (Ctrl+V или долгий тап → «Вставить»).');
+          }).catch(() => {
+            prompt('Скопируйте результат вручную:', text);
+          });
         }
       }).catch(err => {
         console.error(err);
-        alert('Не удалось получить доступ к камере. Запустите по HTTPS или localhost.');
+        alert('Не удалось получить доступ к камере.\nЗапустите по HTTPS или localhost и дайте разрешение.');
         overlay.remove();
         scanBtn.disabled = false;
       });
 
-      closeBtn.onclick = () => {
-        reader.reset();
+      // Закрыть оверлей
+      closeBtn.addEventListener('click', () => {
+        codeReader.reset();
         overlay.remove();
         scanBtn.disabled = false;
-      };
+      });
     });
   </script>
 </body>
 </html>
-
