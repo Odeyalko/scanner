@@ -94,10 +94,7 @@
             <button id="btnLoadUrl" onclick="loadUrl()">Перейти на сайт</button>
         </div>
 
-        <iframe 
-            id="webView" 
-            style="border: none;"
-            onload="handleWebViewLoad()"></iframe>
+        <iframe id="webView" onload="handleWebViewLoad()"></iframe>
     </div>
 
     <button id="fabScan" onclick="startScan()">📸</button>
@@ -107,6 +104,7 @@
     const fabScan = document.getElementById("fabScan");
     let currentInput = null;
 
+    // Загрузка сайта
     function loadUrl() {
         const url = document.getElementById("editUrl").value.trim();
         if (url) {
@@ -117,22 +115,23 @@
         }
     }
 
+    // Запуск сканера
     function startScan() {
         window.open("scanner.html", "ScannerWindow", "width=600,height=800");
     }
 
     // Обработчик загрузки iframe
     function handleWebViewLoad() {
-        // Ищем первое поле ввода в iframe
+        fabScan.style.display = "flex";
+        
+        // Установка фокуса на первое поле ввода без автосфокуса
         const iframeDoc = webView.contentDocument || webView.contentWindow.document;
         const inputs = iframeDoc.querySelectorAll('input');
         if (inputs.length > 0) {
             currentInput = inputs[0];
-            // Убираем autofocus для избежания ошибки
-            currentInput.removeAttribute('autofocus');
+            currentInput.removeAttribute('autofocus'); // Удаляем автосфокус
             currentInput.focus();
         }
-        fabScan.style.display = "flex";
     }
 
     // Обработка данных от сканера
