@@ -1,151 +1,116 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR & Barcode Scanner</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Roboto', sans-serif;
-            background: #f5f5f5;
-        }
-
-        .container {
-            padding: 24px;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        #inputContainer {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        #editUrl {
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            background: #f8f8f8;
-        }
-
-        #btnLoadUrl {
-            padding: 12px 24px;
-            background: #2196F3;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: 500;
-            cursor: pointer;
-        }
-
-        #webView {
-            display: none;
-            width: 100%;
-            height: 100vh;
-            border: none;
-        }
-
-        #fabScan {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            width: 72px;
-            height: 72px;
-            border-radius: 50%;
-            background: #2196F3;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            z-index: 1001;
-            animation: bounce 1s infinite;
-            cursor: pointer;
-        }
-
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        @media (max-width: 600px) {
-            #fabScan {
-                width: 64px;
-                height: 64px;
-                bottom: 16px;
-                right: 16px;
-            }
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scanner Webview by Odeyalko</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html { width: 100%; height: 100%; font-family: Arial, sans-serif; background: #f2f2f2; display: flex; flex-direction: column; }
+    .toolbar { padding: 10px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    #urlInput { width: 100%; padding: 10px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; outline: none; transition: border 0.3s; }
+    #urlInput:focus { border-color: #aaa; }
+    #content { position: relative; flex: 1; overflow: hidden; }
+    #webview { width: 100%; height: 100%; border: none; }
+    #scanBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 64px;
+      height: 64px;
+      border: none;
+      border-radius: 50%;
+      font-size: 32px;
+      line-height: 64px;
+      text-align: center;
+      background: #ff4081;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      cursor: pointer;
+      animation: pulse 2s infinite;
+      z-index: 10;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    #videoOverlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 20;
+    }
+    #videoOverlay video {
+      width: 90%; height: auto;
+      border: 4px solid #fff;
+      border-radius: 12px;
+    }
+    .footer { text-align: center; padding: 8px; background: #fff; font-size: 14px; color: #666; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div id="inputContainer">
-            <input type="text" id="editUrl" placeholder="Введите URL сайта">
-            <button id="btnLoadUrl" onclick="loadUrl()">Перейти на сайт</button>
-        </div>
+  <div class="toolbar">
+    <input id="urlInput" type="text" placeholder="Введите URL и нажмите Enter" />
+  </div>
+  <div id="content">
+    <iframe id="webview" src="about:blank" ></iframe>
+    <button id="scanBtn" title="Сканировать">📷</button>
+  </div>
+  <div class="footer">by Odeyalko</div>
 
-        <iframe id="webView" onload="handleWebViewLoad()"></iframe>
-    </div>
+  <script type="module">
+    import { BrowserMultiFormatReader } from 'https://unpkg.com/@zxing/library@0.18.6/esm/index.js';
 
-    <button id="fabScan" onclick="startScan()">📸</button>
+    const urlInput = document.getElementById('urlInput');
+    const webview = document.getElementById('webview');
+    const scanBtn = document.getElementById('scanBtn');
+    let codeReader;
 
-<script>
-    const webView = document.getElementById("webView");
-    const fabScan = document.getElementById("fabScan");
-    let currentInput = null;
-
-    // Загрузка сайта
-    function loadUrl() {
-        const url = document.getElementById("editUrl").value.trim();
-        if (url) {
-            webView.src = url;
-            webView.style.display = "block";
-            document.getElementById("inputContainer").style.display = "none";
-            currentInput = null;
-        }
-    }
-
-    // Запуск сканера
-    function startScan() {
-        window.open("scanner.html", "ScannerWindow", "width=600,height=800");
-    }
-
-    // Обработчик загрузки iframe
-    function handleWebViewLoad() {
-        fabScan.style.display = "flex";
-        
-        // Установка фокуса на первое поле ввода без автосфокуса
-        const iframeDoc = webView.contentDocument || webView.contentWindow.document;
-        const inputs = iframeDoc.querySelectorAll('input');
-        if (inputs.length > 0) {
-            currentInput = inputs[0];
-            currentInput.removeAttribute('autofocus'); // Удаляем автосфокус
-            currentInput.focus();
-        }
-    }
-
-    // Обработка данных от сканера
-    window.addEventListener("message", (event) => {
-        if (event.data?.type === "SCAN_RESULT") {
-            const data = event.data.data;
-            if (currentInput) {
-                currentInput.value = data;
-                currentInput.dispatchEvent(new Event("input", { bubbles: true }));
-                currentInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-                currentInput = null;
-            }
-        }
+    // Загрузка введенного URL
+    urlInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        let url = urlInput.value.trim();
+        if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
+        webview.src = url;
+      }
     });
-</script>
+
+    // Функция сканирования QR/штрихкодов
+    async function startScan() {
+      scanBtn.style.display = 'none';
+      const overlay = document.createElement('div');
+      overlay.id = 'videoOverlay';
+      const video = document.createElement('video');
+      overlay.appendChild(video);
+      document.getElementById('content').appendChild(overlay);
+
+      codeReader = new BrowserMultiFormatReader();
+      try {
+        const deviceId = (await BrowserMultiFormatReader.listVideoInputDevices())[0].deviceId;
+        await codeReader.decodeFromVideoDevice(deviceId, video, (result, err) => {
+          if (result) {
+            // При успешном сканировании
+            const text = result.getText();
+            codeReader.reset();
+            document.getElementById('content').removeChild(overlay);
+            urlInput.value = text;
+            // Симулируем нажатие Enter
+            urlInput.dispatchEvent(new KeyboardEvent('keydown', { 'key': 'Enter' }));
+            scanBtn.style.display = 'block';
+          }
+        });
+      } catch (err) {
+        console.error(err);
+        alert('Ошибка доступа к камере или сканирования.');
+        codeReader.reset();
+        document.getElementById('content').removeChild(overlay);
+        scanBtn.style.display = 'block';
+      }
+    }
+
+    scanBtn.addEventListener('click', startScan);
+  </script>
 </body>
 </html>
