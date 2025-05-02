@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner</title>
+    <title>QR Scanner</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <style>
         body {
@@ -76,7 +76,7 @@
             }
         },
         decoder: {
-            readers: [ // Поддержка всех форматов
+            readers: [ // Все форматы
                 "code_128_reader",
                 "ean_reader",
                 "ean_8_reader",
@@ -91,7 +91,7 @@
         }
     }, (err) => {
         if (err) {
-            document.getElementById('statusMessage').textContent = 'Ошибка инициализации камеры';
+            document.getElementById('statusMessage').textContent = 'Ошибка доступа к камере';
             return;
         }
         Quagga.start();
@@ -103,10 +103,17 @@
         window.location.href = `index.html#${code}`;
     });
 
-    // Закрытие сканера при нажатии Esc
+    // Закрытие сканера при Esc
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             window.history.back();
+        }
+    });
+
+    // Убедитесь, что кнопка сканирования видима
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement) {
+            fabScan.style.display = 'block';
         }
     });
 </script>
