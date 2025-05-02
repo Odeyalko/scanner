@@ -3,16 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>QR-Scanner by Odeyalko</title>
+  <title>QR-Сканер и Webview by Odeyalko</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box }
-    body,html { width:100%; height:100%; font-family:Arial,sans-serif; display:flex; flex-direction:column; background:#f2f2f2 }
+    body,html { width:100%; height:100%; font-family:Arial,sans-serif; background:#f2f2f2; display:flex; flex-direction:column; }
     .toolbar {
-      padding:10px; background:#fff; box-shadow:0 2px 4px rgba(0,0,0,0.1);
-      transition:0.3s;
+      display:flex; padding:10px; background:#fff;
+      box-shadow:0 2px 4px rgba(0,0,0,0.1); transition:0.3s;
     }
-    .toolbar.hidden { height:0; padding:0; opacity:0; overflow:hidden }
-    #urlForm { display:flex; }
+    .toolbar.hidden { height:0; padding:0; opacity:0; overflow:hidden; }
     #urlInput {
       flex:1; padding:10px; font-size:16px;
       border:2px solid #ddd; border-radius:8px 0 0 8px; outline:none;
@@ -22,100 +21,110 @@
       border:2px solid #ddd; border-left:0; border-radius:0 8px 8px 0;
       background:#4CAF50; color:#fff; cursor:pointer;
     }
-    #urlInput:focus, #goBtn:focus { outline:2px solid #aaa; }
-    #content { position:relative; flex:1; overflow:hidden }
-    #webview { width:100%; height:100%; border:none; }
+    #content { position:relative; flex:1; }
+    #webview {
+      width:100%; height:100%; border:none;
+    }
     #scanBtn {
       position:fixed; bottom:20px; right:20px;
       width:64px; height:64px; border:none; border-radius:50%;
       font-size:32px; background:#ff4081; color:#fff;
-      box-shadow:0 4px 12px rgba(0,0,0,0.3); cursor:pointer;
-      animation:pulse 2s infinite; z-index:10;
+      box-shadow:0 4px 12px rgba(0,0,0,0.3);
+      cursor:pointer; animation:pulse 2s infinite; z-index:10;
     }
     @keyframes pulse {0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
     #videoOverlay {
       position:fixed; top:0; left:0; width:100%; height:100%;
-      background:rgba(0,0,0,0.8);
-      display:flex; align-items:center; justify-content:center;
-      flex-direction:column; z-index:999;
+      background:rgba(0,0,0,0.8); display:flex;
+      align-items:center; justify-content:center; flex-direction:column;
+      z-index:999;
     }
     #videoOverlay video {
-      width:90%; max-width:500px; border:4px solid:#fff; border-radius:12px;
+      width:90%; max-width:500px; border:4px solid#fff; border-radius:12px;
     }
     #closeBtn {
       position:absolute; top:20px; right:20px;
       width:48px; height:48px; border:none; border-radius:50%;
       font-size:24px; background:#fff; color:#ff4081;
       box-shadow:0 4px 12px rgba(0,0,0,0.3);
-      animation:pop 1.5s infinite; cursor:pointer;
+      cursor:pointer; animation:pop 1.5s infinite;
     }
     @keyframes pop {0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
-    .footer { text-align:center; padding:8px; background:#fff; font-size:14px; color:#666 }
+    .footer { text-align:center; padding:8px; background:#fff; font-size:14px; color:#666; }
   </style>
   <script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
 </head>
 <body>
+
   <div class="toolbar" id="toolbar">
-    <form id="urlForm">
-      <input id="urlInput" type="text" placeholder="Введите адрес сайта" autocomplete="off" />
-      <button id="goBtn" type="submit">→</button>
-    </form>
+    <input id="urlInput" type="text" placeholder="Введите адрес сайта" autocomplete="off">
+    <button id="goBtn" type="button">→</button>
   </div>
+
   <div id="content">
-    <iframe id="webview"
-      srcdoc="<p style='padding:20px;font-size:18px;color:#999'>Ждите URL…</p>">
-    </iframe>
+    <iframe id="webview"></iframe>
     <button id="scanBtn" title="Сканировать">📷</button>
   </div>
+
   <div class="footer">by Odeyalko</div>
 
   <script>
-    const toolbar = document.getElementById('toolbar');
-    const urlForm = document.getElementById('urlForm');
+    const toolbar  = document.getElementById('toolbar');
     const urlInput = document.getElementById('urlInput');
-    const webview = document.getElementById('webview');
-    const scanBtn = document.getElementById('scanBtn');
+    const goBtn    = document.getElementById('goBtn');
+    const webview  = document.getElementById('webview');
+    const scanBtn  = document.getElementById('scanBtn');
 
-    // Перехватываем отправку формы
-    urlForm.addEventListener('submit', e => {
-      e.preventDefault();
-      let url = urlInput.value.trim();
-      if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
-      webview.src = url;
+    // Функция навигации
+    function navigateTo(url) {
+      let u = url.trim();
+      if (!/^https?:\/\//i.test(u)) u = 'http://' + u;
+      webview.src = u;
       toolbar.classList.add('hidden');
+    }
+
+    // Обработка клика на стрелку
+    goBtn.addEventListener('click', () => navigateTo(urlInput.value));
+
+    // Обработка Enter
+    urlInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') navigateTo(urlInput.value);
     });
 
-    // Сканирование и автоматический переход при URL
+    // Сканирование
     scanBtn.addEventListener('click', () => {
       scanBtn.disabled = true;
+
       const overlay = document.createElement('div');
       overlay.id = 'videoOverlay';
       const video = document.createElement('video');
       video.autoplay = true; video.playsInline = true;
       overlay.appendChild(video);
+
       const closeBtn = document.createElement('button');
-      closeBtn.id = 'closeBtn'; closeBtn.textContent = '❌';
+      closeBtn.id = 'closeBtn';
+      closeBtn.textContent = '❌';
       overlay.appendChild(closeBtn);
+
       document.body.appendChild(overlay);
 
       const reader = new ZXing.BrowserMultiFormatReader();
       reader.decodeFromVideoDevice(null, video, (result, err) => {
         if (result) {
-          const text = result.getText().trim();
+          const txt = result.getText().trim();
           reader.reset();
           overlay.remove();
           scanBtn.disabled = false;
 
           // Копируем в буфер
-          navigator.clipboard.writeText(text).catch(() => {});
+          navigator.clipboard.writeText(txt).catch(()=>{});
 
-          // Если выглядит как URL — переходим на него автоматически
-          let link = text;
-          if (!/^https?:\/\//i.test(link)) link = 'http://' + link;
-          webview.src = link;
+          // Если это URL – сразу открываем в iframe
+          if (/^https?:\/\//i.test(txt) || /^[\w-]+\.[\w-]+/.test(txt)) {
+            navigateTo(txt);
+          }
         }
-      }).catch(err => {
-        console.error(err);
+      }).catch(() => {
         overlay.remove();
         scanBtn.disabled = false;
       });
@@ -129,3 +138,4 @@
   </script>
 </body>
 </html>
+
