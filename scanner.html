@@ -1,14 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Scanner</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QR Сканер</title>
     <style>
         body {
             margin: 0;
-            padding: 0;
             background: black;
             font-family: 'Roboto', sans-serif;
         }
@@ -21,16 +19,15 @@
             height: 100%;
             background: black;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 999;
         }
 
         #video {
             width: 100%;
-            height: 100%;
+            max-height: 100%;
             object-fit: cover;
-            background: black;
         }
 
         #scanArea {
@@ -43,7 +40,6 @@
             border-radius: 16px;
             transform: translate(-50%, -50%);
             pointer-events: none;
-            z-index: 1001;
         }
 
         #statusMessage {
@@ -60,12 +56,16 @@
             position: absolute;
             top: 16px;
             right: 16px;
-            padding: 8px 16px;
+            padding: 12px 24px;
             background: #FF5722;
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
+        }
+
+        #closeButton:hover {
+            background: #E64A19;
         }
 
         @media (max-width: 600px) {
@@ -84,50 +84,31 @@
         <button id="closeButton" onclick="closeScanner()">Закрыть</button>
     </div>
 
-<script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/build/quagga.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
 <script>
+    const codeReader = new ZXing.BrowserQRCodeReader();
     const video = document.getElementById("video");
-    let scanning = false;
+    const statusMessage = document.getElementById("statusMessage");
 
-    // Инициализация камеры
-    navigator.mediaDevices.getUserMedia({ 
-        video: { 
-            facingMode: "environment",
-            aspectRatio: 1.333,
-            height: 480 
-        } 
-    })
-    .then(stream => {
-        video.srcObject = stream;
-        video.play();
-        startScanning();
-    })
-    .catch(err => {
-        document.getElementById("statusMessage").textContent = "Ошибка доступа к камере";
-        console.error("Ошибка:", err);
-    });
-
-    function startScanning() {
-        if (scanning) return;
-        scanning = true;
-        const codeReader = new ZXing.BrowserQRCodeReader();
-
-        (function scan() {
-            if (!scanning) return;
-            codeReader.decodeFromVideoDevice(null, video, (err, result) => {
-                if (result) {
-                    scanning = false;
-                    window.location.href = `index.html#${result.text}`;
-                } else {
-                    requestAnimationFrame(scan);
-                }
-            });
-        })();
-    }
+    // Запуск камеры
+    codeReader.decodeFromVideoDevice(null, video)
+        .then(result => {
+            statusMessage.textContent = "QR-код найден!";
+            window.location.href = `index.html#${result.text}`;
+        })
+        .catch(err => {
+            statusMessage.textContent = "Ошибка камеры. Проверьте разрешения.";
+            console.error("Ошибка сканирования:", err);
+        });
 
     function closeScanner() {
-        window.location.href = "index.html";
+        window.history.back();
     }
+
+    // Кнопка Esc для закрытия сканера
+    document.addEventListener('keydown', (e) => {
+        if (e.key === "Escape") closeScanner();
+    });
 </script>
 </body>
 </html>
