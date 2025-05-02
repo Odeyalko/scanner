@@ -19,17 +19,14 @@
             margin: 0 auto;
         }
 
-        #inputContainer, #scannerContainer {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
         #inputContainer {
             background: white;
             border-radius: 12px;
             padding: 24px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
 
         #editUrl {
@@ -48,10 +45,6 @@
             border-radius: 8px;
             font-weight: 500;
             cursor: pointer;
-        }
-
-        #btnLoadUrl:hover {
-            background: #1976D2;
         }
 
         #webView {
@@ -79,18 +72,20 @@
             cursor: pointer;
         }
 
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
         #scannerContainer {
             display: none;
             position: fixed;
             top: 0;
             left: 0;
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
             background: black;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
+            z-index: 1000;
         }
 
         #video {
@@ -108,7 +103,7 @@
             height: 250px;
             border: 4px dashed #FFEB3B;
             border-radius: 16px;
-            z-index: 1000;
+            z-index: 1001;
             pointer-events: none;
         }
 
@@ -120,36 +115,51 @@
             color: white;
             font-size: 14px;
             text-align: center;
+            z-index: 1001;
         }
 
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+        #closeScanner {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            padding: 12px 24px;
+            background: #FF5722;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 1001;
         }
 
-        @media (max-width: 600px) {
-            #fabScan {
-                width: 64px;
-                height: 64px;
-                bottom: 16px;
-                right: 16px;
-            }
+        #closeScanner:hover {
+            background: #E64A19;
+        }
 
-            #scanArea {
-                width: 300px;
-                height: 200px;
-            }
+        #scannerInput {
+            display: none;
+            position: fixed;
+            bottom: 16px;
+            left: 16px;
+            width: 100px;
+            height: 40px;
+            border: none;
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
-    <div class="container" id="inputContainer">
+    <!-- Форма ввода URL -->
+    <div id="inputContainer" class="container">
         <input type="text" id="editUrl" placeholder="Введите URL сайта">
         <button id="btnLoadUrl">Перейти на сайт</button>
     </div>
 
+    <!-- iframe для сайта -->
     <iframe id="webView" style="border: none;"></iframe>
 
+    <!-- Кнопка сканирования -->
     <button id="fabScan">📸</button>
 
     <!-- Сканер -->
@@ -157,104 +167,93 @@
         <video id="video" autoplay playsinline></video>
         <canvas id="canvas" style="display: none;"></canvas>
         <div id="scanArea"></div>
-        <div id="footer">by Odeyalko</div>
+        <button id="closeScanner">Закрыть</button>
+        <input type="text" id="scannerInput" placeholder="Результат сканирования">
     </div>
 
+    <div id="footer">by Odeyalko</div>
+
 <script>
-    // Элементы DOM
     const editUrl = document.getElementById("editUrl");
     const webView = document.getElementById("webView");
     const fabScan = document.getElementById("fabScan");
-    const inputContainer = document.getElementById("inputContainer");
     const scannerContainer = document.getElementById("scannerContainer");
     const video = document.getElementById("video");
     const canvas = document.getElementById("canvas");
-    const scanArea = document.getElementById("scanArea");
-
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const scannerInput = document.getElementById("scannerInput");
+    const closeScannerBtn = document.getElementById("closeScanner");
     let scanning = false;
     let currentInput = null;
 
     // Загрузка сайта
-    function loadUrl() {
+    document.getElementById("btnLoadUrl").addEventListener("click", () => {
         const url = editUrl.value.trim();
         if (url) {
             webView.src = url;
             webView.style.display = "block";
             inputContainer.style.display = "none";
-            fabScan.style.display = "flex";
+            scannerInput.style.display = "none";
         }
-    }
-
-    document.getElementById("btnLoadUrl").addEventListener("click", loadUrl);
-
-    // Запуск сканера
-    fabScan.addEventListener("click", () => {
-        scannerContainer.style.display = "flex";
-        inputContainer.style.display = "none";
-        webView.style.display = "none";
-        fabScan.style.display = "none";
-        startScanner();
     });
 
-    // Обработка загрузки iframe
+    // Загрузка iframe
     webView.addEventListener("load", () => {
+        fabScan.style.display = "flex";
         try {
             const iframeDoc = webView.contentDocument || webView.contentWindow.document;
-            const inputs = iframeDoc.querySelectorAll('input');
+            const inputs = iframeDoc.querySelectorAll("input");
             if (inputs.length > 0) {
                 currentInput = inputs[0];
-                currentInput.removeAttribute('autofocus');
-                currentInput.focus();
+                currentInput.removeAttribute("autofocus");
             }
         } catch (e) {
             console.warn("Невозможно получить доступ к iframe — cross-origin ограничение");
+            scannerInput.style.display = "block";
+            currentInput = scannerInput;
         }
     });
 
-    // Сканер (используем jsQR)
+    // Открытие сканера
+    fabScan.addEventListener("click", () => {
+        if (!webView.src) {
+            alert("Сначала введите URL сайта");
+            return;
+        }
+        scannerContainer.style.display = "block";
+        fabScan.style.display = "none";
+        webView.style.display = "none";
+        startScanner();
+    });
+
+    // Закрытие сканера
+    closeScannerBtn.addEventListener("click", () => {
+        stopScanner();
+        scannerContainer.style.display = "none";
+        webView.style.display = "block";
+        fabScan.style.display = "flex";
+        scannerInput.style.display = "none";
+        if (currentInput && currentInput !== scannerInput) {
+            currentInput.focus();
+        }
+    });
+
+    // Сканер (jsQR)
     function startScanner() {
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        let scanning = true;
+        if (scanning) return;
+        scanning = true;
 
         navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } }
+            video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } 
         })
         .then(stream => {
             video.srcObject = stream;
             video.play();
-
             video.addEventListener("loadeddata", () => {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 requestAnimationFrame(scanLoop);
             });
-
-            function scanLoop() {
-                if (!scanning) return;
-
-                if (video.readyState >= video.HAVE_ENOUGH_DATA) {
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-                    if (code) {
-                        if (currentInput) {
-                            currentInput.value = code.data;
-                            currentInput.dispatchEvent(new Event("input", { bubbles: true }));
-                            currentInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-                        } else {
-                            window.location.hash = code.data;
-                        }
-
-                        stopScanner();
-                        inputContainer.style.display = "flex";
-                        webView.style.display = "block";
-                        scannerContainer.style.display = "none";
-                    }
-                }
-
-                requestAnimationFrame(scanLoop);
-            }
         })
         .catch(err => {
             alert("Ошибка камеры. Проверьте разрешения.");
@@ -262,19 +261,40 @@
             stopScanner();
         });
 
+        function scanLoop() {
+            if (!scanning) return;
+            if (video.readyState >= video.HAVE_ENOUGH_DATA) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+                if (code) {
+                    if (currentInput === scannerInput) {
+                        scannerInput.value = code.data;
+                        scannerInput.dispatchEvent(new Event("input", { bubbles: true }));
+                    } else if (currentInput) {
+                        currentInput.value = code.data;
+                        currentInput.dispatchEvent(new Event("input", { bubbles: true }));
+                        currentInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+                    }
+                    stopScanner();
+                    closeScannerBtn.click(); // Автоматическое закрытие
+                }
+            }
+            requestAnimationFrame(scanLoop);
+        }
+
         function stopScanner() {
             scanning = false;
             const stream = video.srcObject;
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
             }
-            scannerContainer.style.display = "none";
-            fabScan.style.display = "flex";
         }
     }
 </script>
 
-<!-- Подключаем jsQR для сканирования -->
+<!-- Поддержка QR и штрихкодов -->
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </body>
 </html>
