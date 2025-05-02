@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR & Barcode Scanner</title>
+    <title>Баркод Сканер</title>
     <style>
         body {
             margin: 0;
@@ -49,14 +49,17 @@
     <div id="scanArea"></div>
     <div id="footer">by Odeyalko</div>
 
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
 <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d', { willReadFrequently: true }); // Указываем willReadFrequently
+    const ctx = canvas.getContext('2d', { willReadFrequently: true }); // Убираем предупреждение
     let scanning = true;
 
-    // Инициализация камеры
+    // Инициализация ZXing.js для всех форматов
+    const codeReader = new ZXing.BrowserMultiFormatReader();
+
+    // Запуск камеры
     navigator.mediaDevices.getUserMedia({
         video: {
             facingMode: "environment",
@@ -67,6 +70,7 @@
     .then(stream => {
         video.srcObject = stream;
         video.play();
+
         // Ждем загрузки видео
         video.addEventListener('loadedmetadata', () => {
             canvas.width = video.videoWidth;
@@ -83,15 +87,18 @@
     function startScanning() {
         if (!scanning) return;
         requestAnimationFrame(startScanning);
-        // Убедимся, что видео загружено и доступно
+
+        // Убедимся, что видео загружено
         if (video.readyState >= video.HAVE_ENOUGH_DATA) {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+            // Читаем все форматы баркодов через ZXing.js
+            const code = codeReader.decode(imageData.data, canvas.width, canvas.height);
 
             if (code) {
                 scanning = false;
-                window.opener.postMessage({ type: 'SCAN_RESULT', data: code.data }, '*');
+                window.opener.postMessage({ type: 'SCAN_RESULT', data: code.text }, '*');
                 window.close();
             }
         }
