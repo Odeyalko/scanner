@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR & Barcode Scanner</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <style>
         body {
             margin: 0;
             padding: 0;
-            font-family: Arial, sans-serif;
+            font-family: 'Roboto', sans-serif;
             background: #f5f5f5;
         }
 
@@ -93,7 +94,10 @@
             <button id="btnLoadUrl" onclick="loadUrl()">Перейти на сайт</button>
         </div>
 
-        <iframe id="webView" onload="onPageLoaded()"></iframe>
+        <iframe 
+            id="webView" 
+            style="border: none;"
+            onload="handleWebViewLoad()"></iframe>
     </div>
 
     <button id="fabScan" onclick="startScan()">📸</button>
@@ -115,16 +119,22 @@
         window.open("scanner.html", "ScannerWindow", "width=600,height=800");
     }
 
-    function onPageLoaded() {
+    // Обработчик загрузки iframe
+    function handleWebViewLoad() {
         fabScan.style.display = "flex";
+        // Удалите autofocus из input и используйте программный фокус
+        const input = document.activeElement;
+        if (input && input.tagName === "INPUT") {
+            input.focus();
+        }
     }
 
     // Обработка данных от сканера
     window.addEventListener("message", (event) => {
         if (event.data?.type === "SCAN_RESULT") {
             const data = event.data.data;
-            const input = document.activeElement;
-            if (input && input.tagName === "INPUT") {
+            const input = document.querySelector('input:focus');
+            if (input) {
                 input.value = data;
                 input.dispatchEvent(new Event("input", { bubbles: true }));
                 input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
