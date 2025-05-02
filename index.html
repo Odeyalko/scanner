@@ -4,12 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR & Barcode Scanner</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <style>
         body {
             margin: 0;
             padding: 0;
-            font-family: 'Roboto', sans-serif;
+            font-family: Arial, sans-serif;
             background: #f5f5f5;
         }
 
@@ -94,7 +93,7 @@
             <button id="btnLoadUrl" onclick="loadUrl()">Перейти на сайт</button>
         </div>
 
-        <iframe id="webView" onload="onPageLoaded()" style="border: none;"></iframe>
+        <iframe id="webView" onload="onPageLoaded()"></iframe>
     </div>
 
     <button id="fabScan" onclick="startScan()">📸</button>
@@ -113,7 +112,6 @@
     }
 
     function startScan() {
-        // Открываем сканер в новом окне
         window.open("scanner.html", "ScannerWindow", "width=600,height=800");
     }
 
