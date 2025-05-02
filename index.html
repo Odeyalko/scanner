@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>QR Scanner</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet" />
     <style>
         body {
             margin: 0;
@@ -26,7 +26,7 @@
             background: white;
             border-radius: 12px;
             padding: 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             display: flex;
             flex-direction: column;
             gap: 16px;
@@ -59,30 +59,22 @@
             position: fixed;
             bottom: 24px;
             right: 24px;
-            width: 64px;
-            height: 64px;
+            width: 72px;
+            height: 72px;
             border-radius: 50%;
             background: #2196F3;
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             z-index: 1000;
             animation: bounce 1s infinite;
+            cursor: pointer;
         }
 
         #fabScan:hover {
             background: #1976D2;
-        }
-
-        #webView {
-            display: none;
-            width: 100%;
-            height: 400px;
-            margin-top: 24px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
         @keyframes bounce {
@@ -90,8 +82,17 @@
             50% { transform: translateY(-10px); }
         }
 
+        #webView {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            border: none;
+        }
+
         @media (max-width: 600px) {
             #fabScan {
+                width: 64px;
+                height: 64px;
                 bottom: 16px;
                 right: 16px;
             }
@@ -101,57 +102,46 @@
 <body>
     <div class="container">
         <div id="inputContainer">
-            <input 
-                type="text" 
-                id="editUrl" 
-                placeholder="Введите URL сайта">
-            <button 
-                id="btnLoadUrl" 
-                onclick="loadUrl()">
-                Перейти на сайт
-            </button>
+            <input type="text" id="editUrl" placeholder="Введите URL сайта" />
+            <button id="btnLoadUrl" onclick="loadUrl()">Перейти на сайт</button>
         </div>
 
-        <iframe 
-            id="webView" 
-            style="border: none;"
-            onload="onPageLoaded()">
-        </iframe>
+        <iframe id="webView" onload="onPageLoaded()"></iframe>
     </div>
 
-    <button 
-        id="fabScan" 
-        onclick="startScan()"
-        style="position: fixed; bottom: 24px; right: 24px;">
-        📸
-    </button>
+    <button id="fabScan" onclick="startScan()">📸</button>
 
 <script>
-    const editUrl = document.getElementById('editUrl');
-    const webView = document.getElementById('webView');
+    const webView = document.getElementById("webView");
+    const fabScan = document.getElementById("fabScan");
 
     function loadUrl() {
-        const url = editUrl.value.trim();
+        const url = document.getElementById("editUrl").value.trim();
         if (url) {
             webView.src = url;
-            webView.style.display = 'block';
-            editUrl.value = '';
+            webView.style.display = "block";
+            document.getElementById("inputContainer").style.display = "none";
         }
     }
 
     function startScan() {
-        window.location.href = 'scanner.html';
+        window.location.href = "scanner.html";
+    }
+
+    function onPageLoaded() {
+        // Скрыть кнопку сканирования при открытии сайта
+        fabScan.style.display = "none";
     }
 
     // Обработка данных от сканера
     if (window.location.hash) {
         const data = window.location.hash.slice(1);
         const input = document.activeElement;
-        if (input && input.tagName === 'INPUT') {
+        if (input && input.tagName === "INPUT") {
             input.value = data;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-            window.location.hash = '';
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+            window.location.hash = "";
         }
     }
 </script>
