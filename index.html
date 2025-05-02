@@ -1,54 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Добавлен мета-тег для поддержки PWA -->
-    <meta name="mobile-web-app-capable" content="yes">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR & Barcode Scanner</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        /* Добавлены стили для статусной строки */
-        #statusBar {
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+            background: #f5f5f5;
+        }
+
+        .container {
+            padding: 24px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        #inputContainer {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        #editUrl {
             padding: 12px;
-            background: #333;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            background: #f8f8f8;
+        }
+
+        #btnLoadUrl {
+            padding: 12px 24px;
+            background: #2196F3;
             color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        #webView {
             display: none;
+            width: 100%;
+            height: 100vh;
+            border: none;
+        }
+
+        #fabScan {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: #2196F3;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            z-index: 1001;
+            animation: bounce 1s infinite;
+            cursor: pointer;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @media (max-width: 600px) {
+            #fabScan {
+                width: 64px;
+                height: 64px;
+                bottom: 16px;
+                right: 16px;
+            }
         }
     </style>
 </head>
 <body>
-    <div id="statusBar"></div>
-    <!-- Остальная разметка без изменений -->
+    <div class="container">
+        <div id="inputContainer">
+            <input type="text" id="editUrl" placeholder="Введите URL сайта">
+            <button id="btnLoadUrl" onclick="loadUrl()">Перейти на сайт</button>
+        </div>
 
-    <script>
-        // Обновлённый обработчик сообщений
-        window.addEventListener("message", (event) => {
-            if (event.data?.type === "SCAN_RESULT") {
-                showStatus("Данные получены...", "success");
-                const data = event.data.data;
-                
-                // Попытка автоматического заполнения
-                const inputs = document.querySelectorAll('input, textarea');
-                const activeInput = [...inputs].find(e => e === document.activeElement);
-                
-                const target = activeInput || inputs[0];
-                if (target) {
-                    target.focus();
-                    target.value = data;
-                    // Имитация пользовательского ввода
-                    const inputEvent = new Event('input', { bubbles: true });
-                    target.dispatchEvent(inputEvent);
-                } else {
-                    showStatus("Не найдено поле для ввода", "error");
-                }
-            }
-        });
+        <iframe id="webView" onload="onPageLoaded()" style="border: none;"></iframe>
+    </div>
 
-        // Новая функция для отображения статуса
-        function showStatus(message, type = "info") {
-            const statusBar = document.getElementById("statusBar");
-            statusBar.style.display = "block";
-            statusBar.textContent = message;
-            statusBar.className = type;
-            setTimeout(() => statusBar.style.display = "none", 2000);
+    <button id="fabScan" onclick="startScan()">📸</button>
+
+<script>
+    const webView = document.getElementById("webView");
+    const fabScan = document.getElementById("fabScan");
+
+    function loadUrl() {
+        const url = document.getElementById("editUrl").value.trim();
+        if (url) {
+            webView.src = url;
+            webView.style.display = "block";
+            document.getElementById("inputContainer").style.display = "none";
         }
-    </script>
+    }
+
+    function startScan() {
+        // Открываем сканер в новом окне
+        window.open("scanner.html", "ScannerWindow", "width=600,height=800");
+    }
+
+    function onPageLoaded() {
+        fabScan.style.display = "flex";
+    }
+
+    // Обработка данных от сканера
+    window.addEventListener("message", (event) => {
+        if (event.data?.type === "SCAN_RESULT") {
+            const data = event.data.data;
+            const input = document.activeElement;
+            if (input && input.tagName === "INPUT") {
+                input.value = data;
+                input.dispatchEvent(new Event("input", { bubbles: true }));
+                input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+            }
+        }
+    });
+</script>
 </body>
 </html>
