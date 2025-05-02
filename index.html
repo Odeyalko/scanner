@@ -4,82 +4,201 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Scanner</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
-        #inputContainer { 
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+            background: #f5f5f5;
+        }
+
+        .container {
             padding: 24px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        #inputContainer {
             background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        #editUrl {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            background: #f8f8f8;
+        }
+
+        #btnLoadUrl {
+            padding: 12px 24px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        #btnLoadUrl:hover {
+            background: #1976D2;
+        }
+
+        #fabScan {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: #2196F3;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            animation: bounce 1s infinite;
+        }
+
+        #fabScan:hover {
+            background: #1976D2;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        #scannerContainer {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: #333;
+            margin: 24px 0;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        #scanArea {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 350px;
+            height: 250px;
+            border: 4px dashed #FFEB3B;
+            border-radius: 16px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        #scannerOverlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            z-index: 1;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 24px;
+            padding: 48px;
         }
-        #webView { 
-            display: none;
-            width: 100%;
-            height: 100vh;
+
+        #scannerOverlay .message {
+            color: white;
+            font-size: 24px;
+            text-align: center;
         }
-        .bounce {
-            animation: bounce 0.8s infinite;
+
+        #scannerOverlay #closeButton {
+            background: #FF5722;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
         }
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-10px); }
-            60% { transform: translateY(-5px); }
+
+        #scannerOverlay #closeButton:hover {
+            background: #E64A19;
+        }
+
+        @media (max-width: 600px) {
+            #fabScan {
+                width: 64px;
+                height: 64px;
+            }
+
+            #scanArea {
+                width: 300px;
+                height: 200px;
+            }
         }
     </style>
 </head>
 <body>
-    <div id="inputContainer">
-        <input 
-            type="text" 
-            id="editUrl" 
-            placeholder="https://example.com"
-            style="padding: 12px; width: 100%; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 8px;">
-        <button 
-            onclick="loadUrl()" 
-            style="padding: 12px; width: 100%; background: #2196F3; color: white; border: none; border-radius: 8px;">
-            Перейти на сайт
-        </button>
+    <div class="container">
+        <div id="inputContainer">
+            <input 
+                type="text" 
+                id="editUrl" 
+                placeholder="Введите URL сайта" 
+                value="https://example.com">
+            <button 
+                id="btnLoadUrl" 
+                onclick="loadUrl()">
+                Перейти на сайт
+            </button>
+        </div>
+
+        <iframe 
+            id="webView" 
+            style="display: none; width: 100%; height: calc(100vh - 120px); border: none;">
+        </iframe>
     </div>
 
-    <iframe 
-        id="webView" 
-        style="border: none;" 
-        onload="onPageLoaded()">
-    </iframe>
-
     <button 
-        onclick="startScan()" 
-        class="bounce" 
-        style="position: fixed; bottom: 24px; right: 24px; 
-        width: 80px; height: 80px; border-radius: 50%; 
-        background: #2196F3; color: white; border: none; 
-        display: flex; align-items: center; justify-content: center;">
-        🕵️
+        id="fabScan" 
+        onclick="startScan()"
+        style="position: fixed; bottom: 24px; right: 24px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="white" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-8 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-4.42 8-8 8zm-1-12h2v2h-2zm0 5h2v2h-2zm4-7v2h-2v-2h2zm0 5h-2v2h2v-2zm-8 0h2v2h-2v-2zm4-5v2h-2v-2h2z"/>
+        </svg>
     </button>
+
+    <div id="scannerOverlay" style="display: none;">
+        <div class="message">Наведите камеру на QR-код</div>
+        <button id="closeButton" onclick="closeScanner()">Закрыть</button>
+    </div>
 
 <script>
     const webView = document.getElementById('webView');
     const inputContainer = document.getElementById('inputContainer');
-    const editUrl = document.getElementById('editUrl');
+    const scannerOverlay = document.getElementById('scannerOverlay');
 
     function loadUrl() {
-        const url = editUrl.value.trim();
+        const url = document.getElementById('editUrl').value.trim();
         if (url) {
             webView.src = url;
             webView.style.display = 'block';
             inputContainer.style.display = 'none';
+            scannerOverlay.style.display = 'none';
         }
     }
 
-    function onPageLoaded() {
-        inputContainer.style.display = 'none';
-        webView.style.display = 'block';
-    }
-
-    async function startScan() {
+    function startScan() {
         window.location.href = 'scanner.html';
     }
 
@@ -91,6 +210,7 @@
             input.value = data;
             input.dispatchEvent(new Event('input', { bubbles: true }));
             input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+            window.location.hash = '';
         }
     }
 </script>
