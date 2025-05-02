@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR & Barcode Scanner</title>
+    <title>QR Scanner</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <style>
         body {
@@ -66,6 +66,7 @@
             justify-content: center;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             animation: bounce 1s infinite;
+            z-index: 1001; /* Кнопка должна быть поверх всего */
         }
 
         #fabScan:hover {
@@ -142,6 +143,7 @@
     const editUrl = document.getElementById('editUrl');
     const webView = document.getElementById('webView');
     const webViewContainer = document.getElementById('webViewContainer');
+    const fabScan = document.getElementById('fabScan');
 
     function loadUrl() {
         const url = editUrl.value.trim();
@@ -156,10 +158,17 @@
     function closeWebView() {
         webViewContainer.style.display = 'none';
         document.body.style.overflow = 'auto';
+        // Восстановить видимость кнопки сканирования
+        fabScan.style.display = 'block';
     }
 
     function onPageLoaded() {
-        document.getElementById('webView').requestFullscreen();
+        // Убедитесь, что кнопка сканирования видима
+        fabScan.style.display = 'block';
+        // Открытие в полноэкранном режиме
+        if (document.fullscreenEnabled) {
+            webViewContainer.requestFullscreen();
+        }
     }
 
     // Обработка данных от сканера
