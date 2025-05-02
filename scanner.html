@@ -1,21 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR & Barcode Scanner</title>
     <style>
         body {
             margin: 0;
+            padding: 0;
             background: black;
             overflow: hidden;
+        }
+
+        #scannerContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: black;
         }
 
         #video {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            background: black;
         }
 
         #scanArea {
@@ -44,16 +56,27 @@
     </style>
 </head>
 <body>
-    <video id="video" autoplay playsinline></video>
-    <div id="scanArea"></div>
-    <div id="statusMessage">Наведите камеру на код</div>
+    <div id="scannerContainer">
+        <video id="video" autoplay playsinline></video>
+        <div id="scanArea"></div>
+        <div id="statusMessage">Наведите камеру на код</div>
+    </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.4/html5-qrcode.min.js"></script>
 <script>
     const video = document.getElementById("video");
+    const scanArea = document.getElementById("scanArea");
     const statusMessage = document.getElementById("statusMessage");
 
-    // Запуск камеры
+    // Инициализация камеры
+    const html5QrcodeScanner = new Html5Qrcode("video", { verbose: false });
+
+    const config = {
+        fps: 10,
+        qrbox: { width: 300, height: 200 }
+    };
+
+    // Запуск сканера
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
         .then(stream => {
             video.srcObject = stream;
@@ -63,26 +86,25 @@
         .catch(err => {
             statusMessage.textContent = "Ошибка камеры. Проверьте разрешения.";
             console.error("Ошибка доступа к камере:", err);
+            setTimeout(() => window.location.href = "index.html", 3000);
         });
 
     function startScanning() {
-        const codeReader = new ZXing.BrowserMultiFormatReader();
-        const track = video.srcObject.getTracks()[0];
-
-        (function scan() {
-            if (!track.enabled) return;
-            codeReader.decodeFromVideoDevice(track.getSettings().deviceId, video)
-                .then(result => {
-                    // Отправляем данные через postMessage
-                    if (window.opener) {
-                        window.opener.postMessage({ type: "SCAN_RESULT", data: result.text }, "*");
-                    } else if (window.parent) {
-                        window.parent.postMessage({ type: "SCAN_RESULT", data: result.text }, "*");
-                    }
-                    window.close(); // Закрываем окно сканера
-                })
-                .catch(() => requestAnimationFrame(scan));
-        })();
+        html5QrcodeScanner.start(
+            { facingMode: "environment" },
+            config,
+            (result) => {
+                statusMessage.textContent = "Код найден!";
+                window.opener.postMessage({ type: "SCAN_RESULT", data: result.text }, "*");
+                setTimeout(() => window.close(), 1000); // Закрываем сканер через 1 секунду
+            },
+            (error) => {
+                if (!error?.toString().includes("No code found")) {
+                    statusMessage.textContent = "Ошибка сканирования. Попробуйте ещё раз.";
+                    console.error("Ошибка сканирования:", error);
+                }
+            }
+        );
     }
 </script>
 </body>
