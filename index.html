@@ -3,15 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>QR-Сканер и Webview by Odeyalko</title>
+  <title>QR-Сканер by Odeyalko</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box }
-    body,html { width:100%; height:100%; font-family:Arial,sans-serif; background:#f2f2f2; display:flex; flex-direction:column; }
+    body,html { width:100%; height:100%; font-family:Arial,sans-serif; display:flex; flex-direction:column; background:#f2f2f2 }
     .toolbar {
       display:flex; padding:10px; background:#fff;
-      box-shadow:0 2px 4px rgba(0,0,0,0.1); transition:0.3s;
+      box-shadow:0 2px 4px rgba(0,0,0,0.1);
     }
-    .toolbar.hidden { height:0; padding:0; opacity:0; overflow:hidden; }
     #urlInput {
       flex:1; padding:10px; font-size:16px;
       border:2px solid #ddd; border-radius:8px 0 0 8px; outline:none;
@@ -21,10 +20,6 @@
       border:2px solid #ddd; border-left:0; border-radius:0 8px 8px 0;
       background:#4CAF50; color:#fff; cursor:pointer;
     }
-    #content { position:relative; flex:1; }
-    #webview {
-      width:100%; height:100%; border:none;
-    }
     #scanBtn {
       position:fixed; bottom:20px; right:20px;
       width:64px; height:64px; border:none; border-radius:50%;
@@ -33,15 +28,6 @@
       cursor:pointer; animation:pulse 2s infinite; z-index:10;
     }
     @keyframes pulse {0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
-    #videoOverlay {
-      position:fixed; top:0; left:0; width:100%; height:100%;
-      background:rgba(0,0,0,0.8); display:flex;
-      align-items:center; justify-content:center; flex-direction:column;
-      z-index:999;
-    }
-    #videoOverlay video {
-      width:90%; max-width:500px; border:4px solid#fff; border-radius:12px;
-    }
     #closeBtn {
       position:absolute; top:20px; right:20px;
       width:48px; height:48px; border:none; border-radius:50%;
@@ -50,53 +36,46 @@
       cursor:pointer; animation:pop 1.5s infinite;
     }
     @keyframes pop {0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
-    .footer { text-align:center; padding:8px; background:#fff; font-size:14px; color:#666; }
+    .footer { margin-top:auto; text-align:center; padding:8px; background:#fff; font-size:14px; color:#666 }
   </style>
   <script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
 </head>
 <body>
 
-  <div class="toolbar" id="toolbar">
+  <div class="toolbar">
     <input id="urlInput" type="text" placeholder="Введите адрес сайта" autocomplete="off">
-    <button id="goBtn" type="button">→</button>
+    <button id="goBtn">→</button>
   </div>
 
-  <div id="content">
-    <iframe id="webview"></iframe>
-    <button id="scanBtn" title="Сканировать">📷</button>
-  </div>
+  <button id="scanBtn" title="Сканировать">📷</button>
 
   <div class="footer">by Odeyalko</div>
 
   <script>
-    const toolbar  = document.getElementById('toolbar');
     const urlInput = document.getElementById('urlInput');
     const goBtn    = document.getElementById('goBtn');
-    const webview  = document.getElementById('webview');
     const scanBtn  = document.getElementById('scanBtn');
 
-    // Функция навигации
-    function navigateTo(url) {
+    function navigate(url) {
       let u = url.trim();
       if (!/^https?:\/\//i.test(u)) u = 'http://' + u;
-      webview.src = u;
-      toolbar.classList.add('hidden');
+      window.location.href = u;
     }
 
-    // Обработка клика на стрелку
-    goBtn.addEventListener('click', () => navigateTo(urlInput.value));
-
-    // Обработка Enter
+    goBtn.addEventListener('click', () => navigate(urlInput.value));
     urlInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') navigateTo(urlInput.value);
+      if (e.key === 'Enter') navigate(urlInput.value);
     });
 
-    // Сканирование
     scanBtn.addEventListener('click', () => {
       scanBtn.disabled = true;
-
       const overlay = document.createElement('div');
       overlay.id = 'videoOverlay';
+      Object.assign(overlay.style, {
+        position:'fixed',top:0,left:0,width:'100%',height:'100%',
+        background:'rgba(0,0,0,0.8)',display:'flex',
+        alignItems:'center',justifyContent:'center',zIndex:999
+      });
       const video = document.createElement('video');
       video.autoplay = true; video.playsInline = true;
       overlay.appendChild(video);
@@ -111,29 +90,26 @@
       const reader = new ZXing.BrowserMultiFormatReader();
       reader.decodeFromVideoDevice(null, video, (result, err) => {
         if (result) {
-          const txt = result.getText().trim();
+          const text = result.getText().trim();
           reader.reset();
           overlay.remove();
           scanBtn.disabled = false;
-
-          // Копируем в буфер
-          navigator.clipboard.writeText(txt).catch(()=>{});
-
-          // Если это URL – сразу открываем в iframe
-          if (/^https?:\/\//i.test(txt) || /^[\w-]+\.[\w-]+/.test(txt)) {
-            navigateTo(txt);
-          }
+          // копируем в буфер
+          navigator.clipboard.writeText(text).catch(()=>{});
+          // сразу переходим, если это URL
+          navigate(text);
         }
       }).catch(() => {
-        overlay.remove();
-        scanBtn.disabled = false;
-      });
-
-      closeBtn.addEventListener('click', () => {
         reader.reset();
         overlay.remove();
         scanBtn.disabled = false;
       });
+
+      closeBtn.onclick = () => {
+        reader.reset();
+        overlay.remove();
+        scanBtn.disabled = false;
+      };
     });
   </script>
 </body>
