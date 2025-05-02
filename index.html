@@ -94,7 +94,10 @@
             <button id="btnLoadUrl" onclick="loadUrl()">Перейти на сайт</button>
         </div>
 
-        <iframe id="webView" onload="handleWebViewLoad()" style="border: none;"></iframe>
+        <iframe 
+            id="webView" 
+            style="border: none;"
+            onload="handleWebViewLoad()"></iframe>
     </div>
 
     <button id="fabScan" onclick="startScan()">📸</button>
@@ -110,23 +113,26 @@
             webView.src = url;
             webView.style.display = "block";
             document.getElementById("inputContainer").style.display = "none";
-            currentInput = null; // Сброс активного элемента
+            currentInput = null;
         }
     }
 
     function startScan() {
-        // Открываем сканер в новом окне
         window.open("scanner.html", "ScannerWindow", "width=600,height=800");
     }
 
+    // Обработчик загрузки iframe
     function handleWebViewLoad() {
-        fabScan.style.display = "flex";
-        // Устанавливаем focus на первый input
-        const inputs = webView.contentDocument.querySelectorAll('input');
+        // Ищем первое поле ввода в iframe
+        const iframeDoc = webView.contentDocument || webView.contentWindow.document;
+        const inputs = iframeDoc.querySelectorAll('input');
         if (inputs.length > 0) {
             currentInput = inputs[0];
+            // Убираем autofocus для избежания ошибки
+            currentInput.removeAttribute('autofocus');
             currentInput.focus();
         }
+        fabScan.style.display = "flex";
     }
 
     // Обработка данных от сканера
@@ -137,7 +143,7 @@
                 currentInput.value = data;
                 currentInput.dispatchEvent(new Event("input", { bubbles: true }));
                 currentInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-                currentInput = null; // Сброс активного элемента
+                currentInput = null;
             }
         }
     });
