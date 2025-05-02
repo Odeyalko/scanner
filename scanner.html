@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR Сканер</title>
+    <title>QR & Barcode Scanner</title>
     <style>
         body {
             margin: 0;
+            padding: 0;
             background: black;
             overflow: hidden;
         }
@@ -45,6 +46,7 @@
     <div id="scanArea"></div>
     <div id="footer">by Odeyalko</div>
 
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
@@ -58,17 +60,16 @@
     .then(stream => {
         video.srcObject = stream;
         video.play();
-        scanLoop();
+        startScanning();
     })
     .catch(err => {
         console.error("Ошибка доступа к камере:", err);
         scanning = false;
     });
 
-    // Функция сканирования
-    function scanLoop() {
+    function startScanning() {
         if (!scanning) return;
-        requestAnimationFrame(scanLoop);
+        requestAnimationFrame(startScanning);
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const code = jsQR(imageData.data, imageData.width, imageData.height);
@@ -80,7 +81,7 @@
         }
     }
 
-    // Инициализация размеров
+    // Инициализация размеров canvas
     video.addEventListener('play', () => {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -94,8 +95,5 @@
         }
     });
 </script>
-
-<!-- Подключаем jsQR для распознавания -->
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </body>
 </html>
