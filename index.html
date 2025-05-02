@@ -50,25 +50,26 @@
 </head>
 <body>
   <div class="toolbar" id="toolbar">
-    <input id="urlInput" type="text" placeholder="Введите URL и нажмите Enter">
+    <input id="urlInput" type="text" placeholder="Введите адрес сайта">
   </div>
   <div id="content">
     <iframe id="webview"
-      srcdoc="<p style='padding:20px;font-size:18px;color:#999'>Введите URL выше и нажмите Enter</p>">
+      srcdoc="<p style='padding:20px;font-size:18px;color:#999'>Ждите URL...</p>">
     </iframe>
     <button id="scanBtn" title="Сканировать">📷</button>
   </div>
   <div class="footer">by Odeyalko</div>
 
   <script>
-    const toolbar   = document.getElementById('toolbar');
-    const urlInput  = document.getElementById('urlInput');
-    const webview   = document.getElementById('webview');
-    const scanBtn   = document.getElementById('scanBtn');
+    const toolbar  = document.getElementById('toolbar');
+    const urlInput = document.getElementById('urlInput');
+    const webview  = document.getElementById('webview');
+    const scanBtn  = document.getElementById('scanBtn');
 
-    // Открываем сайт в iframe и прячем панель URL
+    // Перехват Enter, установка src и скрытие панели
     urlInput.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
+        e.preventDefault();
         let url = urlInput.value.trim();
         if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
         webview.src = url;
@@ -76,11 +77,9 @@
       }
     });
 
-    // Запускаем сканер и копируем результат
+    // Запуск камеры и копирование результата
     scanBtn.addEventListener('click', () => {
       scanBtn.disabled = true;
-
-      // Создаём оверлей с видео
       const overlay = document.createElement('div');
       overlay.id = 'videoOverlay';
       const video = document.createElement('video');
@@ -102,21 +101,20 @@
           codeReader.reset();
           overlay.remove();
           scanBtn.disabled = false;
-          // копируем в буфер
+
           navigator.clipboard.writeText(text).then(() => {
-            alert('Сканировано: ' + text + '\n\nТекст скопирован в буфер обмена. Перейдите на нужный сайт и вставьте (Ctrl+V или долгий тап → «Вставить»).');
+            alert(`Сканировано:\n${text}\n\nСкопировано в буфер обмена.`);
           }).catch(() => {
-            prompt('Скопируйте результат вручную:', text);
+            prompt('Скопируйте вручную:', text);
           });
         }
       }).catch(err => {
         console.error(err);
-        alert('Не удалось получить доступ к камере.\nЗапустите по HTTPS или localhost и дайте разрешение.');
+        alert('Не удалось получить доступ к камере.');
         overlay.remove();
         scanBtn.disabled = false;
       });
 
-      // Закрыть оверлей
       closeBtn.addEventListener('click', () => {
         codeReader.reset();
         overlay.remove();
