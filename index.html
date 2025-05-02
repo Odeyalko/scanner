@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>QR & Barcode Scanner</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet" />
     <style>
         body {
             margin: 0;
-            padding: 0;
             font-family: 'Roboto', sans-serif;
             background: #f5f5f5;
         }
@@ -17,16 +16,13 @@
             padding: 24px;
             max-width: 600px;
             margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
         }
 
         #inputContainer {
             background: white;
             border-radius: 12px;
             padding: 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             display: flex;
             flex-direction: column;
             gap: 16px;
@@ -48,7 +44,7 @@
             border-radius: 8px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: background 0.3s;
         }
 
         #btnLoadUrl:hover {
@@ -67,14 +63,10 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
             z-index: 1001;
             animation: bounce 1s infinite;
             cursor: pointer;
-        }
-
-        #fabScan:hover {
-            background: #1976D2;
         }
 
         @keyframes bounce {
@@ -86,7 +78,6 @@
             display: none;
             width: 100%;
             height: 100vh;
-            margin-top: 24px;
             border: none;
         }
 
@@ -103,29 +94,14 @@
 <body>
     <div class="container">
         <div id="inputContainer">
-            <input 
-                type="text" 
-                id="editUrl" 
-                placeholder="Введите URL сайта">
-            <button 
-                id="btnLoadUrl" 
-                onclick="loadUrl()">
-                Перейти на сайт
-            </button>
+            <input type="text" id="editUrl" placeholder="Введите URL сайта" />
+            <button id="btnLoadUrl" onclick="loadUrl()">Перейти на сайт</button>
         </div>
 
-        <iframe 
-            id="webView" 
-            style="border: none;"
-            onload="onPageLoaded()">
-        </iframe>
+        <iframe id="webView" onload="onPageLoaded()"></iframe>
     </div>
 
-    <button 
-        id="fabScan" 
-        onclick="startScan()">
-        📸
-    </button>
+    <button id="fabScan" onclick="startScan()">📸</button>
 
 <script>
     const webView = document.getElementById("webView");
@@ -137,7 +113,6 @@
             webView.src = url;
             webView.style.display = "block";
             document.getElementById("inputContainer").style.display = "none";
-            fabScan.style.display = "flex"; // Кнопка остаётся видимой
         }
     }
 
@@ -146,7 +121,7 @@
     }
 
     function onPageLoaded() {
-        fabScan.style.display = "flex"; // Кнопка остаётся видимой
+        fabScan.style.display = "flex";
     }
 
     // Обработка данных от сканера
