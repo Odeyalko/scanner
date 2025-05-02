@@ -1,0 +1,15 @@
+/* Можно добавить стили для улучшения внешнего вида */
+#editUrl {
+    font-size: 18px;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+.bounce {
+    animation: bounce 200ms infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(0.9); }
+}

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner</title>
+    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/build/quagga.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        #scannerContainer { 
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #scanArea { 
+            position: absolute;
+            top: 50%; 
+            left: 50%;
+            width: 350px; 
+            height: 250px;
+            border: 4px solid #FFEB3B;
+            border-radius: 16px;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body>
+    <div id="scannerContainer">
+        <div id="scanArea"></div>
+    </div>
+
+<script>
+    Quagga.init({
+        inputStream: {
+            name: "Live",
+            type: "LiveStream",
+            target: document.querySelector('#scannerContainer'),
+            constraints: {
+                width: 640,
+                height: 480,
+                facingMode: "environment" // задняя камера
+            }
+        },
+        decoder: {
+            readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader", "code_39_vin_reader", "codabar_reader", "upc_reader", "upc_e_reader", "i2of5_reader", "qr_code_reader"]
+        }
+    }, (err) => {
+        if (err) {
+            console.log(err);
+            return;
+        }
+        Quagga.start();
+    });
+
+    Quagga.onDetected((result) => {
+        const code = result.codeResult.code;
+        Quagga.stop();
+        window.location.href = `index.html#${code}`;
+    });
+</script>
+</body>
+</html>

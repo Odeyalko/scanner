@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        #inputContainer { 
+            padding: 24px;
+            background: white;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1;
+        }
+        #webView { 
+            display: none;
+            width: 100%;
+            height: 100vh;
+        }
+        .bounce {
+            animation: bounce 0.8s infinite;
+        }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="inputContainer">
+        <input 
+            type="text" 
+            id="editUrl" 
+            placeholder="https://example.com"
+            style="padding: 12px; width: 100%; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 8px;">
+        <button 
+            onclick="loadUrl()" 
+            style="padding: 12px; width: 100%; background: #2196F3; color: white; border: none; border-radius: 8px;">
+            Перейти на сайт
+        </button>
+    </div>
+
+    <iframe 
+        id="webView" 
+        style="border: none;" 
+        onload="onPageLoaded()">
+    </iframe>
+
+    <button 
+        onclick="startScan()" 
+        class="bounce" 
+        style="position: fixed; bottom: 24px; right: 24px; 
+        width: 80px; height: 80px; border-radius: 50%; 
+        background: #2196F3; color: white; border: none; 
+        display: flex; align-items: center; justify-content: center;">
+        🕵️
+    </button>
+
+<script>
+    const webView = document.getElementById('webView');
+    const inputContainer = document.getElementById('inputContainer');
+    const editUrl = document.getElementById('editUrl');
+
+    function loadUrl() {
+        const url = editUrl.value.trim();
+        if (url) {
+            webView.src = url;
+            webView.style.display = 'block';
+            inputContainer.style.display = 'none';
+        }
+    }
+
+    function onPageLoaded() {
+        inputContainer.style.display = 'none';
+        webView.style.display = 'block';
+    }
+
+    async function startScan() {
+        window.location.href = 'scanner.html';
+    }
+
+    // Получаем данные от сканера
+    if (window.location.hash) {
+        const data = window.location.hash.slice(1);
+        const input = document.activeElement;
+        if (input && input.tagName === 'INPUT') {
+            input.value = data;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        }
+    }
+</script>
+</body>
+</html>
