@@ -76,6 +76,7 @@
     const webview = document.getElementById('webview');
     const scanBtn = document.getElementById('scanBtn');
 
+    // Перехватываем отправку формы
     urlForm.addEventListener('submit', e => {
       e.preventDefault();
       let url = urlInput.value.trim();
@@ -84,6 +85,7 @@
       toolbar.classList.add('hidden');
     });
 
+    // Сканирование и автоматический переход при URL
     scanBtn.addEventListener('click', () => {
       scanBtn.disabled = true;
       const overlay = document.createElement('div');
@@ -96,14 +98,21 @@
       overlay.appendChild(closeBtn);
       document.body.appendChild(overlay);
 
-      const codeReader = new ZXing.BrowserMultiFormatReader();
-      codeReader.decodeFromVideoDevice(null, video, (result, err) => {
+      const reader = new ZXing.BrowserMultiFormatReader();
+      reader.decodeFromVideoDevice(null, video, (result, err) => {
         if (result) {
-          const text = result.getText();
-          codeReader.reset();
+          const text = result.getText().trim();
+          reader.reset();
           overlay.remove();
           scanBtn.disabled = false;
+
+          // Копируем в буфер
           navigator.clipboard.writeText(text).catch(() => {});
+
+          // Если выглядит как URL — переходим на него автоматически
+          let link = text;
+          if (!/^https?:\/\//i.test(link)) link = 'http://' + link;
+          webview.src = link;
         }
       }).catch(err => {
         console.error(err);
@@ -112,7 +121,7 @@
       });
 
       closeBtn.addEventListener('click', () => {
-        codeReader.reset();
+        reader.reset();
         overlay.remove();
         scanBtn.disabled = false;
       });
