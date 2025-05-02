@@ -8,7 +8,6 @@
     <style>
         body {
             margin: 0;
-            padding: 0;
             font-family: 'Roboto', sans-serif;
             background: #f5f5f5;
         }
@@ -70,6 +69,7 @@
             z-index: 1001;
             animation: bounce 1s infinite;
             cursor: pointer;
+            display: none;
         }
 
         @keyframes bounce {
@@ -85,7 +85,6 @@
             width: 100%;
             height: 100%;
             background: black;
-            z-index: 1000;
         }
 
         #video {
@@ -98,13 +97,25 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
             width: 350px;
             height: 250px;
             border: 4px dashed #FFEB3B;
+            transform: translate(-50%, -50%);
             border-radius: 16px;
-            z-index: 1001;
             pointer-events: none;
+        }
+
+        #scannerInput {
+            position: fixed;
+            bottom: 16px;
+            left: 16px;
+            width: calc(100% - 32px);
+            max-width: 600px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            z-index: 1001;
         }
 
         #footer {
@@ -114,38 +125,15 @@
             transform: translateX(-50%);
             color: white;
             font-size: 14px;
-            text-align: center;
-            z-index: 1001;
         }
 
-        #closeScanner {
-            position: fixed;
-            top: 16px;
-            right: 16px;
-            padding: 12px 24px;
-            background: #FF5722;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            z-index: 1001;
-        }
-
-        #closeScanner:hover {
-            background: #E64A19;
-        }
-
-        #scannerInput {
-            display: none;
-            position: fixed;
-            bottom: 16px;
-            left: 16px;
-            width: 100px;
-            height: 40px;
-            border: none;
-            border-radius: 8px;
-            padding: 8px;
-            font-size: 14px;
+        @media (max-width: 600px) {
+            #fabScan {
+                width: 64px;
+                height: 64px;
+                bottom: 16px;
+                right: 16px;
+            }
         }
     </style>
 </head>
@@ -157,7 +145,7 @@
     </div>
 
     <!-- iframe для сайта -->
-    <iframe id="webView" style="border: none;"></iframe>
+    <iframe id="webView"></iframe>
 
     <!-- Кнопка сканирования -->
     <button id="fabScan">📸</button>
@@ -167,11 +155,9 @@
         <video id="video" autoplay playsinline></video>
         <canvas id="canvas" style="display: none;"></canvas>
         <div id="scanArea"></div>
-        <button id="closeScanner">Закрыть</button>
-        <input type="text" id="scannerInput" placeholder="Результат сканирования">
+        <input type="text" id="scannerInput" placeholder="Сканер не работает. Вставьте данные вручную." />
+        <div id="footer">by Odeyalko</div>
     </div>
-
-    <div id="footer">by Odeyalko</div>
 
 <script>
     const editUrl = document.getElementById("editUrl");
@@ -182,22 +168,25 @@
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     const scannerInput = document.getElementById("scannerInput");
-    const closeScannerBtn = document.getElementById("closeScanner");
+
     let scanning = false;
     let currentInput = null;
 
     // Загрузка сайта
     document.getElementById("btnLoadUrl").addEventListener("click", () => {
         const url = editUrl.value.trim();
-        if (url) {
-            webView.src = url;
-            webView.style.display = "block";
-            inputContainer.style.display = "none";
-            scannerInput.style.display = "none";
+        if (!url) {
+            alert("Введите корректный URL");
+            return;
         }
+
+        webView.src = url;
+        webView.style.display = "block";
+        document.getElementById("inputContainer").style.display = "none";
+        fabScan.style.display = "none"; // Скрыть до загрузки
     });
 
-    // Загрузка iframe
+    // После загрузки сайта
     webView.addEventListener("load", () => {
         fabScan.style.display = "flex";
         try {
@@ -206,6 +195,7 @@
             if (inputs.length > 0) {
                 currentInput = inputs[0];
                 currentInput.removeAttribute("autofocus");
+                currentInput.focus();
             }
         } catch (e) {
             console.warn("Невозможно получить доступ к iframe — cross-origin ограничение");
@@ -220,35 +210,25 @@
             alert("Сначала введите URL сайта");
             return;
         }
+
         scannerContainer.style.display = "block";
         fabScan.style.display = "none";
         webView.style.display = "none";
         startScanner();
     });
 
-    // Закрытие сканера
-    closeScannerBtn.addEventListener("click", () => {
-        stopScanner();
-        scannerContainer.style.display = "none";
-        webView.style.display = "block";
-        fabScan.style.display = "flex";
-        scannerInput.style.display = "none";
-        if (currentInput && currentInput !== scannerInput) {
-            currentInput.focus();
-        }
-    });
-
-    // Сканер (jsQR)
+    // Запуск сканера
     function startScanner() {
         if (scanning) return;
         scanning = true;
 
         navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment", width: { ideal: 640 }, height: { ideal: 480 } 
+            video: { facingMode: "environment" }
         })
         .then(stream => {
             video.srcObject = stream;
             video.play();
+
             video.addEventListener("loadeddata", () => {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
@@ -271,14 +251,13 @@
                 if (code) {
                     if (currentInput === scannerInput) {
                         scannerInput.value = code.data;
-                        scannerInput.dispatchEvent(new Event("input", { bubbles: true }));
                     } else if (currentInput) {
                         currentInput.value = code.data;
                         currentInput.dispatchEvent(new Event("input", { bubbles: true }));
                         currentInput.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
                     }
                     stopScanner();
-                    closeScannerBtn.click(); // Автоматическое закрытие
+                    closeScanner();
                 }
             }
             requestAnimationFrame(scanLoop);
@@ -292,9 +271,38 @@
             }
         }
     }
+
+    // Закрытие сканера
+    function closeScanner() {
+        scannerContainer.style.display = "none";
+        webView.style.display = "block";
+        fabScan.style.display = "flex";
+        scannerInput.style.display = "none";
+        currentInput = null;
+    }
+
+    // Обработчик закрытия сканера
+    document.getElementById("scannerInput").addEventListener("blur", () => {
+        if (scannerInput.value) {
+            if (currentInput === scannerInput && webView.style.display === "block") {
+                try {
+                    const iframeDoc = webView.contentDocument || webView.contentWindow.document;
+                    const inputs = iframeDoc.querySelectorAll("input");
+                    if (inputs.length > 0) {
+                        inputs[0].value = scannerInput.value;
+                        inputs[0].dispatchEvent(new Event("input", { bubbles: true }));
+                        inputs[0].dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+                    }
+                } catch (e) {
+                    console.warn("Невозможно вставить данные в iframe — cross-origin");
+                }
+                scannerInput.value = "";
+            }
+        }
+    });
 </script>
 
-<!-- Поддержка QR и штрихкодов -->
+<!-- Поддержка QR-кодов -->
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </body>
 </html>
