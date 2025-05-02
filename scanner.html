@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR & Barcode Scanner</title>
+    <title>Баркод Сканер</title>
     <style>
         body {
             margin: 0;
@@ -27,77 +27,40 @@
             border: 4px dashed #FFEB3B;
             border-radius: 16px;
         }
-
-        #footer {
-            position: fixed;
-            bottom: 16px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            font-size: 14px;
-            text-align: center;
-        }
     </style>
 </head>
 <body>
     <video id="video" autoplay playsinline></video>
     <canvas id="canvas" style="display: none;"></canvas>
     <div id="scanArea"></div>
-    <div id="footer">by Odeyalko</div>
 
-<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.4/dist/html5-qrcode.min.js"></script>
 <script>
     const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    let scanning = true;
+    let scanner;
 
-    // Инициализация ZXing.js
-    const codeReader = new ZXing.BrowserMultiFormatReader();
+    // Инициализация сканера
+    window.addEventListener('DOMContentLoaded', () => {
+        scanner = new html5_qrcode.default();
+        
+        // Настройки сканера
+        const config = {
+            fps: 10,
+            qrbox: { width: 300, height: 200 }
+        };
 
-    // Запуск камеры
-    navigator.mediaDevices.getUserMedia({
-        video: {
-            facingMode: "environment",
-            width: { ideal: 640 },
-            height: { ideal: 480 }
-        }
-    })
-    .then(stream => {
-        video.srcObject = stream;
-        video.play();
-        video.addEventListener('loadedmetadata', () => {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            startScanning();
-        });
-    })
-    .catch(err => {
-        console.error("Ошибка доступа к камере:", err);
-        scanning = false;
-    });
-
-    // Функция сканирования
-    function startScanning() {
-        if (!scanning) return;
-        requestAnimationFrame(startScanning);
-
-        if (video.readyState >= video.HAVE_ENOUGH_DATA) {
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = codeReader.decode(imageData.data, canvas.width, canvas.height);
-
-            if (code) {
-                scanning = false;
-                window.opener.postMessage({ type: 'SCAN_RESULT', data: code.text }, '*');
+        // Запуск сканера
+        scanner.start(
+            { facingMode: "environment" }, // задняя камера
+            config,
+            (decodedText) => {
+                window.opener.postMessage({ type: 'SCAN_RESULT', data: decodedText }, '*');
                 window.close();
+            },
+            (error) => {
+                console.error("Ошибка сканирования:", error);
             }
-        }
-    }
-
-    // Закрытие сканера при Esc
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') window.close();
+        );
     });
 </script>
 </body>
