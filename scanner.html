@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Баркод Сканер</title>
+    <title>QR & Barcode Scanner</title>
     <style>
         body {
             margin: 0;
@@ -16,7 +16,9 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            background: black;
+            position: fixed;
+            top: 0;
+            left: 0;
         }
 
         #scanArea {
@@ -47,35 +49,36 @@
     <div id="scanArea"></div>
     <div id="footer">by Odeyalko</div>
 
-<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@latest/dist/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.4/dist/html5-qrcode.min.js"></script>
 <script>
-    const video = document.getElementById('video');
-    const footer = document.getElementById('footer');
-
     // Инициализация сканера
-    const scanner = new html5_qrcode.default();
+    window.addEventListener('DOMContentLoaded', () => {
+        const video = document.getElementById('video');
+        const footer = document.getElementById('footer');
 
-    // Настройки сканера
-    const config = {
-        fps: 10,
-        qrbox: { width: 300, height: 200 }
-    };
+        // Используем правильное имя объекта
+        const html5QrcodeScanner = new html5Qrcode("video");
 
-    // Функция обработки результатов
-    function onScanSuccess(decodedText) {
-        window.opener.postMessage({ type: 'SCAN_RESULT', data: decodedText }, '*');
-        window.close();
-    }
+        // Настройки сканера
+        const config = {
+            fps: 10,
+            qrbox: { width: 300, height: 200 }
+        };
 
-    // Запуск сканера
-    scanner.start(
-        { facingMode: "environment" }, // Используем заднюю камеру
-        config,
-        onScanSuccess,
-        document.getElementById('video')
-    ).catch(err => {
-        console.error("Ошибка доступа к камере:", err);
-        footer.textContent = "Ошибка доступа к камере";
+        // Запуск сканера
+        html5QrcodeScanner.start(
+            { facingMode: "environment" }, // задняя камера
+            config,
+            (decodedText) => {
+                // Передача данных в opener
+                window.opener.postMessage({ type: 'SCAN_RESULT', data: decodedText }, '*');
+                window.close();
+            },
+            (error) => {
+                console.error("Ошибка сканирования:", error);
+                footer.textContent = "Ошибка доступа к камере";
+            }
+        );
     });
 </script>
 </body>
