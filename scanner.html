@@ -4,60 +4,108 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Scanner</title>
-    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/build/quagga.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        body { margin: 0; padding: 0; }
-        #scannerContainer { 
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
+        body {
+            margin: 0;
+            padding: 0;
+            background: #212121;
+            font-family: 'Roboto', sans-serif;
         }
-        #scanArea { 
+
+        #scannerContainer {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        #video {
+            max-width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        }
+
+        #scanArea {
             position: absolute;
-            top: 50%; 
+            top: 50%;
             left: 50%;
-            width: 350px; 
+            width: 350px;
             height: 250px;
-            border: 4px solid #FFEB3B;
+            border: 4px dashed #FFEB3B;
             border-radius: 16px;
             transform: translate(-50%, -50%);
+        }
+
+        #statusMessage {
+            color: white;
+            font-size: 18px;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            #scanArea {
+                width: 300px;
+                height: 200px;
+            }
         }
     </style>
 </head>
 <body>
     <div id="scannerContainer">
+        <video id="video" autoplay playsinline></video>
         <div id="scanArea"></div>
+        <div id="statusMessage">Ожидание QR-кода...</div>
     </div>
 
 <script>
-    Quagga.init({
-        inputStream: {
-            name: "Live",
-            type: "LiveStream",
-            target: document.querySelector('#scannerContainer'),
-            constraints: {
-                width: 640,
-                height: 480,
-                facingMode: "environment" // задняя камера
-            }
-        },
-        decoder: {
-            readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader", "code_39_vin_reader", "codabar_reader", "upc_reader", "upc_e_reader", "i2of5_reader", "qr_code_reader"]
-        }
-    }, (err) => {
-        if (err) {
-            console.log(err);
-            return;
-        }
-        Quagga.start();
-    });
+    const video = document.getElementById('video');
+    const canvas = document.createElement('canvas');
+    let scanning = false;
 
-    Quagga.onDetected((result) => {
-        const code = result.codeResult.code;
-        Quagga.stop();
-        window.location.href = `index.html#${code}`;
-    });
+    // Инициализация камеры
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        .then(stream => {
+            video.srcObject = stream;
+            video.play();
+            startScanning();
+        })
+        .catch(error => {
+            document.getElementById('statusMessage').textContent = 'Ошибка доступа к камере';
+            console.error('Ошибка:', error);
+        });
+
+    function startScanning() {
+        if (scanning) return;
+        scanning = true;
+        const track = video.srcObject.getTracks()[0];
+        const codeReader = new ZXing.BrowserQRCodeReader();
+
+        (function scan() {
+            if (!scanning) return;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            codeReader.decodeFromCanvas(canvas)
+                .then(result => {
+                    scanning = false;
+                    track.stop();
+                    window.location.href = `index.html#${result.text}`;
+                })
+                .catch(() => requestAnimationFrame(scan));
+        })();
+    }
+
+    // Обнаружение мобильных устройств
+    if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+        document.getElementById('video').style.maxWidth = '100%';
+        document.getElementById('scanArea').style.width = '300px';
+        document.getElementById('scanArea').style.height = '200px';
+    }
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
 </body>
 </html>
