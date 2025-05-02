@@ -3,42 +3,30 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Баркод Сканер</title>
+    <title>QR & Barcode Scanner</title>
     <style>
         body {
             margin: 0;
-            padding: 0;
             background: black;
             overflow: hidden;
-        }
-
-        #scannerContainer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: black;
         }
 
         #video {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            background: black;
         }
 
         #scanArea {
             position: absolute;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%);
             width: 350px;
             height: 250px;
             border: 4px dashed #FFEB3B;
             border-radius: 16px;
+            transform: translate(-50%, -50%);
             pointer-events: none;
             z-index: 1001;
         }
@@ -53,46 +41,49 @@
             text-align: center;
             z-index: 1001;
         }
-
-        @media (max-width: 600px) {
-            #scanArea {
-                width: 300px;
-                height: 200px;
-            }
-        }
     </style>
 </head>
 <body>
-    <div id="scannerContainer">
-        <video id="video" autoplay playsinline></video>
-        <div id="scanArea"></div>
-        <div id="statusMessage">Наведите камеру на код</div>
-    </div>
+    <video id="video" autoplay playsinline></video>
+    <div id="scanArea"></div>
+    <div id="statusMessage">Наведите камеру на код</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
 <script>
     const video = document.getElementById("video");
-    const scanArea = document.getElementById("scanArea");
     const statusMessage = document.getElementById("statusMessage");
 
-    // Используем BrowserMultiFormatReader для всех форматов
-    const codeReader = new ZXing.BrowserMultiFormatReader();
+    // Запуск камеры
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        .then(stream => {
+            video.srcObject = stream;
+            video.play();
+            startScanning();
+        })
+        .catch(err => {
+            statusMessage.textContent = "Ошибка камеры. Проверьте разрешения.";
+            console.error("Ошибка доступа к камере:", err);
+        });
 
-    // Запуск сканера
-    codeReader.decodeFromVideoDevice(null, video, (result, err) => {
-        if (result) {
-            statusMessage.textContent = "Код найден!";
-            window.location.href = `index.html#${result.text}`;
-        } else if (err && !err?.toString().includes("No video input")) {
-            statusMessage.textContent = "Ошибка сканирования. Попробуйте ещё раз.";
-            console.error("Ошибка сканирования:", err);
-        }
-    });
+    function startScanning() {
+        const codeReader = new ZXing.BrowserMultiFormatReader();
+        const track = video.srcObject.getTracks()[0];
 
-    // Автоматический возврат при Esc
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') window.history.back();
-    });
+        (function scan() {
+            if (!track.enabled) return;
+            codeReader.decodeFromVideoDevice(track.getSettings().deviceId, video)
+                .then(result => {
+                    // Отправляем данные через postMessage
+                    if (window.opener) {
+                        window.opener.postMessage({ type: "SCAN_RESULT", data: result.text }, "*");
+                    } else if (window.parent) {
+                        window.parent.postMessage({ type: "SCAN_RESULT", data: result.text }, "*");
+                    }
+                    window.close(); // Закрываем окно сканера
+                })
+                .catch(() => requestAnimationFrame(scan));
+        })();
+    }
 </script>
 </body>
 </html>
