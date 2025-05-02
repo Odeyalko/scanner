@@ -7,25 +7,25 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body, html { width: 100%; height: 100%; font-family: Arial, sans-serif; background: #f2f2f2; display: flex; flex-direction: column; }
-    .toolbar { padding: 10px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    #urlInput { width: 100%; padding: 10px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; outline: none; transition: border 0.3s; }
+    .toolbar { padding: 10px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 2; }
+    #urlInput {
+      width: 100%; padding: 10px; font-size: 16px;
+      border: 2px solid #ddd; border-radius: 8px;
+      outline: none; transition: border 0.3s;
+    }
     #urlInput:focus { border-color: #aaa; }
     #content { position: relative; flex: 1; overflow: hidden; }
-    #webview { width: 100%; height: 100%; border: none; }
+    #webview { width: 100%; height: 100%; border: none; z-index: 1; }
+
     #scanBtn {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 64px;
-      height: 64px;
-      border: none;
-      border-radius: 50%;
+      bottom: 20px; right: 20px;
+      width: 64px; height: 64px;
+      border: none; border-radius: 50%;
       font-size: 32px;
-      line-height: 64px;
-      text-align: center;
       background: #ff4081;
       color: #fff;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       cursor: pointer;
       animation: pulse 2s infinite;
       z-index: 10;
@@ -34,83 +34,99 @@
       0%, 100% { transform: scale(1); }
       50% { transform: scale(1.1); }
     }
+
     #videoOverlay {
-      position: absolute;
+      position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.8);
       display: flex; align-items: center; justify-content: center;
-      z-index: 20;
+      z-index: 999;
     }
     #videoOverlay video {
-      width: 90%; height: auto;
+      width: 90%; max-width: 500px;
       border: 4px solid #fff;
       border-radius: 12px;
     }
-    .footer { text-align: center; padding: 8px; background: #fff; font-size: 14px; color: #666; }
+
+    .footer {
+      text-align: center; padding: 8px;
+      background: #fff; font-size: 14px; color: #666;
+      z-index: 2;
+    }
   </style>
+  <script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
 </head>
 <body>
   <div class="toolbar">
     <input id="urlInput" type="text" placeholder="Введите URL и нажмите Enter" />
   </div>
+
   <div id="content">
-    <iframe id="webview" src="about:blank" ></iframe>
+    <iframe id="webview" src="about:blank"></iframe>
     <button id="scanBtn" title="Сканировать">📷</button>
   </div>
+
   <div class="footer">by Odeyalko</div>
 
-  <script type="module">
-    import { BrowserMultiFormatReader } from 'https://unpkg.com/@zxing/library@0.18.6/esm/index.js';
-
+  <script>
     const urlInput = document.getElementById('urlInput');
     const webview = document.getElementById('webview');
     const scanBtn = document.getElementById('scanBtn');
-    let codeReader;
 
-    // Загрузка введенного URL
-    urlInput.addEventListener('keydown', e => {
+    // Открытие URL по Enter
+    urlInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         let url = urlInput.value.trim();
         if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
+        console.log('Открываю сайт:', url);
         webview.src = url;
       }
     });
 
-    // Функция сканирования QR/штрихкодов
-    async function startScan() {
-      scanBtn.style.display = 'none';
+    // Сканирование
+    scanBtn.addEventListener('click', async () => {
+      scanBtn.disabled = true;
+
       const overlay = document.createElement('div');
       overlay.id = 'videoOverlay';
-      const video = document.createElement('video');
-      overlay.appendChild(video);
-      document.getElementById('content').appendChild(overlay);
 
-      codeReader = new BrowserMultiFormatReader();
+      const video = document.createElement('video');
+      video.setAttribute('autoplay', '');
+      video.setAttribute('muted', '');
+      video.setAttribute('playsinline', '');
+
+      overlay.appendChild(video);
+      document.body.appendChild(overlay);
+
+      const codeReader = new ZXing.BrowserMultiFormatReader();
+
       try {
-        const deviceId = (await BrowserMultiFormatReader.listVideoInputDevices())[0].deviceId;
+        const devices = await ZXing.BrowserCodeReader.listVideoInputDevices();
+        const deviceId = devices[0]?.deviceId;
+        if (!deviceId) throw new Error("Нет доступа к камере");
+
         await codeReader.decodeFromVideoDevice(deviceId, video, (result, err) => {
           if (result) {
-            // При успешном сканировании
             const text = result.getText();
+            console.log('Сканировано:', text);
             codeReader.reset();
-            document.getElementById('content').removeChild(overlay);
+            overlay.remove();
+            scanBtn.disabled = false;
+
             urlInput.value = text;
-            // Симулируем нажатие Enter
-            urlInput.dispatchEvent(new KeyboardEvent('keydown', { 'key': 'Enter' }));
-            scanBtn.style.display = 'block';
+            let url = text.trim();
+            if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
+            webview.src = url;
           }
         });
-      } catch (err) {
-        console.error(err);
-        alert('Ошибка доступа к камере или сканирования.');
-        codeReader.reset();
-        document.getElementById('content').removeChild(overlay);
-        scanBtn.style.display = 'block';
+      } catch (error) {
+        console.error('Ошибка камеры:', error);
+        alert('Не удалось получить доступ к камере.');
+        scanBtn.disabled = false;
+        overlay.remove();
       }
-    }
-
-    scanBtn.addEventListener('click', startScan);
+    });
   </script>
 </body>
 </html>
