@@ -1,47 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>QR Сканер</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Баркод Сканер</title>
     <style>
-        html, body {
+        body {
             margin: 0;
             padding: 0;
-            height: 100%;
-            width: 100%;
-            overflow: hidden;
             background: black;
+            overflow: hidden;
         }
 
         #scannerContainer {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
+            background: black;
         }
 
         #video {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            background: black;
         }
 
         #scanArea {
             position: absolute;
             top: 50%;
             left: 50%;
+            transform: translate(-50%, -50%);
             width: 350px;
             height: 250px;
             border: 4px dashed #FFEB3B;
             border-radius: 16px;
-            transform: translate(-50%, -50%);
             pointer-events: none;
-            z-index: 1000;
+            z-index: 1001;
         }
 
         #statusMessage {
@@ -53,28 +52,6 @@
             font-size: 18px;
             text-align: center;
             z-index: 1001;
-        }
-
-        #closeButton, #retryButton {
-            position: absolute;
-            bottom: 24px;
-            right: 24px;
-            padding: 12px 24px;
-            background: #FF5722;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            z-index: 1001;
-            transition: all 0.3s;
-        }
-
-        #retryButton {
-            right: 120px;
-        }
-
-        #closeButton:hover, #retryButton:hover {
-            background: #E64A19;
         }
 
         @media (max-width: 600px) {
@@ -89,49 +66,33 @@
     <div id="scannerContainer">
         <video id="video" autoplay playsinline></video>
         <div id="scanArea"></div>
-        <div id="statusMessage">Наведите камеру на QR-код</div>
-        <button id="closeButton" onclick="closeScanner()">Закрыть</button>
-        <button id="retryButton" onclick="startScan()">Повторить</button>
+        <div id="statusMessage">Наведите камеру на код</div>
     </div>
 
-<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.4/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
 <script>
-    let html5QrcodeScanner;
+    const video = document.getElementById("video");
+    const scanArea = document.getElementById("scanArea");
+    const statusMessage = document.getElementById("statusMessage");
 
-    function startScan() {
-        const video = document.getElementById('video');
-        const statusMessage = document.getElementById('statusMessage');
+    // Используем BrowserMultiFormatReader для всех форматов
+    const codeReader = new ZXing.BrowserMultiFormatReader();
 
-        // Очистка предыдущего сканера
-        if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
-            html5QrcodeScanner.clear();
-            html5QrcodeScanner = null;
+    // Запуск сканера
+    codeReader.decodeFromVideoDevice(null, video, (result, err) => {
+        if (result) {
+            statusMessage.textContent = "Код найден!";
+            window.location.href = `index.html#${result.text}`;
+        } else if (err && !err?.toString().includes("No video input")) {
+            statusMessage.textContent = "Ошибка сканирования. Попробуйте ещё раз.";
+            console.error("Ошибка сканирования:", err);
         }
+    });
 
-        // Инициализация Html5Qrcode
-        html5QrcodeScanner = new Html5Qrcode("video");
-        const config = { fps: 10, qrbox: { width: 300, height: 200 } };
-
-        // Запуск сканера
-        html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess)
-            .catch(err => {
-                statusMessage.textContent = "Ошибка камеры. Проверьте разрешения.";
-                console.error("Ошибка инициализации сканера:", err);
-            });
-    }
-
-    function onScanSuccess(decodedText) {
-        html5QrcodeScanner.stop();
-        window.location.href = `index.html#${decodedText}`;
-    }
-
-    function closeScanner() {
-        html5QrcodeScanner.stop();
-        window.location.href = "index.html";
-    }
-
-    // Автозапуск сканера
-    window.onload = () => startScan();
+    // Автоматический возврат при Esc
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') window.history.back();
+    });
 </script>
 </body>
 </html>
