@@ -2,82 +2,53 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>QR-Сканер by Odeyalko</title>
+  <title>Сканер и Перейти на сайт</title>
+  <script src="https://unpkg.com/@zxing/library@latest"></script>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box }
-    body,html { width:100%; height:100%; font-family:Arial,sans-serif; display:flex; flex-direction:column; background:#f2f2f2 }
-    .toolbar {
-      display:flex; padding:10px; background:#fff;
-      box-shadow:0 2px 4px rgba(0,0,0,0.1);
-    }
-    #urlInput {
-      flex:1; padding:10px; font-size:16px;
-      border:2px solid #ddd; border-radius:8px 0 0 8px; outline:none;
-    }
-    #goBtn {
-      padding:0 16px; font-size:16px;
-      border:2px solid #ddd; border-left:0; border-radius:0 8px 8px 0;
-      background:#4CAF50; color:#fff; cursor:pointer;
-    }
-    #scanBtn {
-      position:fixed; bottom:20px; right:20px;
-      width:64px; height:64px; border:none; border-radius:50%;
-      font-size:32px; background:#ff4081; color:#fff;
-      box-shadow:0 4px 12px rgba(0,0,0,0.3);
-      cursor:pointer; animation:pulse 2s infinite; z-index:10;
-    }
-    @keyframes pulse {0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
-    #closeBtn {
-      position:absolute; top:20px; right:20px;
-      width:48px; height:48px; border:none; border-radius:50%;
-      font-size:24px; background:#fff; color:#ff4081;
-      box-shadow:0 4px 12px rgba(0,0,0,0.3);
-      cursor:pointer; animation:pop 1.5s infinite;
-    }
-    @keyframes pop {0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
-    .footer { margin-top:auto; text-align:center; padding:8px; background:#fff; font-size:14px; color:#666 }
+    body { font-family: sans-serif; background: #111; color: #fff; text-align: center; margin: 0; padding: 2em; }
+    input { padding: 10px; font-size: 18px; width: 90%; max-width: 400px; border-radius: 8px; border: none; margin-bottom: 1em; }
+    button { font-size: 20px; padding: 10px 20px; border-radius: 8px; border: none; background: #333; color: #fff; cursor: pointer; margin: 5px; }
+    #videoOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
+    #videoOverlay video { width: 90%; max-width: 500px; border-radius: 10px; }
+    #closeBtn { position: absolute; top: 10px; right: 10px; font-size: 30px; background: none; border: none; color: white; cursor: pointer; }
   </style>
-  <script src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
 </head>
 <body>
 
-  <div class="toolbar">
-    <input id="urlInput" type="text" placeholder="Введите адрес сайта" autocomplete="off">
-    <button id="goBtn">→</button>
-  </div>
-
-  <button id="scanBtn" title="Сканировать">📷</button>
-
-  <div class="footer">by Odeyalko</div>
+  <h2>🌐 Введите URL сайта</h2>
+  <input id="urlInput" placeholder="https://example.com">
+  <br>
+  <button id="goBtn">🚀 Перейти</button>
+  <button id="scanBtn">📷 Сканировать</button>
 
   <script>
     const urlInput = document.getElementById('urlInput');
-    const goBtn    = document.getElementById('goBtn');
-    const scanBtn  = document.getElementById('scanBtn');
+    const goBtn = document.getElementById('goBtn');
+    const scanBtn = document.getElementById('scanBtn');
 
-    function navigate(url) {
-      let u = url.trim();
-      if (!/^https?:\/\//i.test(u)) u = 'http://' + u;
-      window.location.href = u;
+    function openUrl() {
+      const url = urlInput.value.trim();
+      if (!/^https?:\/\//i.test(url)) {
+        alert('Введите корректный URL, начиная с http:// или https://');
+        return;
+      }
+      window.open(url, '_blank'); // открывает сайт в новой вкладке
     }
 
-    goBtn.addEventListener('click', () => navigate(urlInput.value));
-    urlInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') navigate(urlInput.value);
+    goBtn.addEventListener('click', openUrl);
+    urlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') openUrl();
     });
 
     scanBtn.addEventListener('click', () => {
       scanBtn.disabled = true;
+
       const overlay = document.createElement('div');
       overlay.id = 'videoOverlay';
-      Object.assign(overlay.style, {
-        position:'fixed',top:0,left:0,width:'100%',height:'100%',
-        background:'rgba(0,0,0,0.8)',display:'flex',
-        alignItems:'center',justifyContent:'center',zIndex:999
-      });
+
       const video = document.createElement('video');
-      video.autoplay = true; video.playsInline = true;
+      video.setAttribute('autoplay', '');
+      video.setAttribute('playsinline', '');
       overlay.appendChild(video);
 
       const closeBtn = document.createElement('button');
@@ -87,31 +58,31 @@
 
       document.body.appendChild(overlay);
 
-      const reader = new ZXing.BrowserMultiFormatReader();
-      reader.decodeFromVideoDevice(null, video, (result, err) => {
+      const codeReader = new ZXing.BrowserMultiFormatReader();
+
+      codeReader.decodeFromVideoDevice(null, video, (result, err) => {
         if (result) {
-          const text = result.getText().trim();
-          reader.reset();
+          const text = result.getText();
+          codeReader.reset();
           overlay.remove();
           scanBtn.disabled = false;
-          // копируем в буфер
-          navigator.clipboard.writeText(text).catch(()=>{});
-          // сразу переходим, если это URL
-          navigate(text);
+          navigator.clipboard.writeText(text).catch(console.error);
         }
-      }).catch(() => {
-        reader.reset();
+      }).catch(err => {
+        console.error(err);
+        alert('Не удалось получить доступ к камере.');
         overlay.remove();
         scanBtn.disabled = false;
       });
 
       closeBtn.onclick = () => {
-        reader.reset();
+        codeReader.reset();
         overlay.remove();
         scanBtn.disabled = false;
       };
     });
   </script>
+
 </body>
 </html>
 
